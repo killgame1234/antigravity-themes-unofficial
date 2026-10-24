@@ -1,10 +1,48 @@
 # How to Create Custom Themes & Interactive Companions for Antigravity 2.0
 
-This guide explains the exact architecture and step-by-step workflow used to create live-injected custom themes, video backgrounds, canvas VFX, and interactive screen companions for **Google Antigravity 2.0 Desktop**—without modifying or unpacking any core application files (`app.asar`).
+This guide explains both the **1-Prompt Lazy Method** (where Antigravity AI builds the folder, theme script, and `.bat` file for you automatically) and the manual technical breakdown.
 
 ---
 
-## 1. How It Works (Architecture)
+## ⚡ The "Lazy" 3-Step Method (Let AI Do 100% of the Work)
+
+You don't even need to create the folder or write a single line of code yourself—**Antigravity AI can create the folder, write the JavaScript injector, generate the `.bat` launcher, and inject the theme into itself live.**
+
+### Step 1: Pick Your Assets (Optional)
+- If you want a **background video** or **pop-out clip** (`.mp4`) or a **character image/sprite** (`.png` / `.webp`), just download it and copy its file path (e.g. `C:\Users\YourName\Downloads\my_clip.mp4`).
+- If you want a **pure color/CSS theme**, you don't need to download anything!
+
+### Step 2: Copy & Paste This Master Prompt into Antigravity Chat
+Open **Antigravity 2.0**, start a chat, and paste this exact prompt (just replace the `[brackets]` with what you want):
+
+```text
+Create a custom live-injected theme for my Antigravity 2.0 Desktop app based on [CHARACTER / SHOW / STYLE NAME]:
+
+1. Create a new folder at "C:\Users\<YOUR_USERNAME>\.gemini\antigravity\themes\<Theme_Name>".
+2. Write a Node script "apply_<theme>_theme.js" that:
+   - Reads the active Chrome DevTools port from "%APPDATA%\Antigravity\DevToolsActivePort".
+   - Connects to http://127.0.0.1:<port>/json/list and injects into the active page via WebSocket "Runtime.evaluate".
+   - Injects a <style id="custom-antigravity-theme"> tag with a custom color palette for [CHARACTER / SHOW], custom user/agent chat bubbles, and custom hover effects.
+   - IMPORTANT UI FIXES:
+     * Put the main background on "html, body" and keep "#root, .bg-background, .sticky, .md-sticky-message-bleed" transparent with "box-shadow: none !important" so there are no nested background shadow boxes.
+     * Style ".settings-modal-container, .settings-modal-container .bg-background, [role='dialog'], [role='menu'], [role='listbox']" with a 97% opaque dark background so Settings stays readable.
+     * Include "button[data-testid='automations-button']" alongside "aside a" so the sidebar Automations button matches the theme.
+   - (Optional) If using local videos/images, convert them to Base64 -> Uint8Array -> Blob -> URL.createObjectURL(blob) (and set video.muted = true before video.play()), or key out black backgrounds on a <canvas>.
+   - (Optional) Add an interactive character companion that walks around the screen perimeter, says character lines when clicked, and has a right-click command menu (with a ".flip-below" class when y < 230 so the speech bubble never clips at the top).
+3. Create a portable "Apply_<Theme>_Theme.bat" launcher in the same folder using:
+   @echo off
+   set ELECTRON_RUN_AS_NODE=1
+   "%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe" "%~dp0apply_<theme>_theme.js"
+4. Run the script right now using Antigravity.exe with ELECTRON_RUN_AS_NODE=1 (piped to "| Out-String") so my Antigravity window transforms immediately!
+```
+
+### Step 3: Double-Click the `.bat` File Anytime Later
+- Antigravity will create the folder, write `apply_<theme>_theme.js` and `Apply_<Theme>_Theme.bat`, and immediately apply the theme to your open window.
+- Next time you open Antigravity, just go to `C:\Users\<YOUR_USERNAME>\.gemini\antigravity\themes\<Theme_Name>` and **double-click `Apply_<Theme>_Theme.bat`** (or create a Desktop shortcut to it) to turn your theme on in 1 second!
+
+---
+
+## 1. How It Works Under the Hood (Architecture)
 
 Antigravity 2.0 Desktop is an Electron application (`Antigravity.exe`) that exposes a local Chrome DevTools Protocol (CDP) debugging port stored in `%APPDATA%\Antigravity\DevToolsActivePort`.
 
