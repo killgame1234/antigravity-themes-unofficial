@@ -1,18 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const SPRITE_PATH = path.join(__dirname, 'capri_sprite.webp');
+const SPRITE_PATH = path.join(__dirname, 'capri_spritesheet.jpg');
 const POPOUT_VIDEO_PATH = path.join(__dirname, 'capri_popout.mp4');
 
 async function main() {
     if (!fs.existsSync(SPRITE_PATH)) {
-        console.error('Capri sprite not found at:', SPRITE_PATH);
+        console.error('Capri sprite sheet not found at:', SPRITE_PATH);
         process.exit(1);
     }
 
     const spriteBuffer = fs.readFileSync(SPRITE_PATH);
     const spriteBase64 = spriteBuffer.toString('base64');
-    console.log('Loaded Capri sprite bytes:', spriteBuffer.length);
+    console.log('Loaded Capri sprite sheet bytes:', spriteBuffer.length);
 
     let popoutVideoBase64 = '';
     if (fs.existsSync(POPOUT_VIDEO_PATH)) {
@@ -75,6 +75,10 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     cancelAnimationFrame(window.__capriAnimFrame);
                     window.__capriAnimFrame = null;
                 }
+                if (window.__moonlitAnimFrame) {
+                    cancelAnimationFrame(window.__moonlitAnimFrame);
+                    window.__moonlitAnimFrame = null;
+                }
                 if (window.__capriCleanupListeners) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
@@ -89,7 +93,10 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     'prescript-header-insignia',
                     'capri-companion-root',
                     'capri-lightning-canvas',
-                    'capri-top-popout'
+                    'capri-top-popout',
+                    'moonlit-bg-video',
+                    'moonlit-vignette-overlay',
+                    'moonlit-particles-canvas'
                 ].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.remove();
@@ -110,83 +117,126 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     popoutBlobUrl = URL.createObjectURL(vBlob);
                 }
 
-                // 1. Key out black background from capri_sprite.webp so Capri is a crisp transparent sprite
+                // 1. Slice & Key out the 13 Poses from capri_spritesheet.jpg
                 const rawImg = new Image();
-                rawImg.src = "data:image/webp;base64,${spriteBase64}";
+                rawImg.src = "data:image/jpeg;base64,${spriteBase64}";
                 await new Promise((res, rej) => {
                     rawImg.onload = res;
                     rawImg.onerror = rej;
                 });
 
-                const sCanvas = document.createElement('canvas');
-                const sw = rawImg.naturalWidth;
-                const sh = rawImg.naturalHeight;
-                sCanvas.width = sw;
-                sCanvas.height = sh;
-                const sCtx = sCanvas.getContext('2d');
-                sCtx.drawImage(rawImg, 0, 0);
+                const SPRITE_DEFS = {
+                    idle_meditate:   { x: 41,  y: 101, w: 155, h: 225, holes: [[55, 125], [105, 125]] },
+                    idle_lounge:     { x: 220, y: 113, w: 197, h: 191, holes: [[89, 112], [142, 113], [119, 135]] },
+                    idle_sleepy:     { x: 441, y: 116, w: 172, h: 194, holes: [] },
+                    idle_sit_1:      { x: 644, y: 105, w: 157, h: 230, holes: [[81, 125]] },
+                    idle_sit_2:      { x: 816, y: 107, w: 168, h: 221, holes: [[80, 120]] },
+                    interact_dizzy:  { x: 58,  y: 445, w: 186, h: 239, holes: [[66, 94]] },
+                    interact_love:   { x: 307, y: 452, w: 158, h: 210, holes: [] },
+                    interact_tickle: { x: 523, y: 463, w: 198, h: 198, holes: [[98, 87], [84, 98]] },
+                    interact_cursor: { x: 778, y: 469, w: 177, h: 185, holes: [[30, 93], [60, 111]], cursorWhiteBox: [6, 80, 35, 142] },
+                    play_peek:       { x: 45,  y: 863, w: 206, h: 127, holes: [] },
+                    play_ball:       { x: 297, y: 804, w: 203, h: 193, holes: [[109, 96], [133, 98]] },
+                    play_laptop:     { x: 530, y: 813, w: 199, h: 173, holes: [[119, 131], [91, 146]] },
+                    play_handstand:  { x: 782, y: 783, w: 178, h: 221, holes: [[46, 149], [99, 152]] }
+                };
 
-                const sData = sCtx.getImageData(0, 0, sw, sh);
-                const px = sData.data;
-
-                // Flood-fill / luminance key from exterior black pixels so interior dark limbs stay intact
-                const visited = new Uint8Array(sw * sh);
-                const queue = [];
-
-                function isBgBlack(idx) {
-                    const r = px[idx];
-                    const g = px[idx + 1];
-                    const b = px[idx + 2];
-                    return r < 18 && g < 18 && b < 18;
+                function isBgGray(r, g, b) {
+                    return r >= 186 && g >= 186 && b >= 186 &&
+                           Math.abs(r - g) <= 20 &&
+                           Math.abs(g - b) <= 20 &&
+                           Math.abs(r - b) <= 22;
                 }
 
-                for (let x = 0; x < sw; x++) {
-                    queue.push(x);
-                    queue.push((sh - 1) * sw + x);
-                }
-                for (let y = 0; y < sh; y++) {
-                    queue.push(y * sw);
-                    queue.push(y * sw + (sw - 1));
-                }
+                const capriSprites = {};
+                for (const [key, def] of Object.entries(SPRITE_DEFS)) {
+                    const c = document.createElement('canvas');
+                    const cw = def.w;
+                    const ch = def.h;
+                    c.width = cw;
+                    c.height = ch;
+                    const ctx = c.getContext('2d');
+                    ctx.drawImage(rawImg, def.x, def.y, cw, ch, 0, 0, cw, ch);
 
-                while (queue.length > 0) {
-                    const pos = queue.pop();
-                    if (pos < 0 || pos >= sw * sh || visited[pos]) continue;
-                    visited[pos] = 1;
-                    const idx = pos * 4;
-                    if (isBgBlack(idx)) {
-                        px[idx + 3] = 0;
-                        const x = pos % sw;
-                        const y = (pos - x) / sw;
-                        if (x > 0) queue.push(pos - 1);
-                        if (x < sw - 1) queue.push(pos + 1);
-                        if (y > 0) queue.push(pos - sw);
-                        if (y < sh - 1) queue.push(pos + sw);
+                    const imgData = ctx.getImageData(0, 0, cw, ch);
+                    const px = imgData.data;
+                    const visited = new Uint8Array(cw * ch);
+                    const queue = [];
+
+                    // Seed flood-fill from all 4 outer borders
+                    for (let x = 0; x < cw; x++) {
+                        queue.push(x);
+                        queue.push((ch - 1) * cw + x);
                     }
-                }
+                    for (let y = 0; y < ch; y++) {
+                        queue.push(y * cw);
+                        queue.push(y * cw + (cw - 1));
+                    }
+                    // Seed interior enclosed arm/leg background holes
+                    for (const [hx, hy] of def.holes) {
+                        if (hx >= 0 && hx < cw && hy >= 0 && hy < ch) {
+                            queue.push(hy * cw + hx);
+                        }
+                    }
 
-                // Soften 1px halo around keyed edges
-                for (let y = 1; y < sh - 1; y++) {
-                    for (let x = 1; x < sw - 1; x++) {
-                        const pos = y * sw + x;
+                    while (queue.length > 0) {
+                        const pos = queue.pop();
+                        if (pos < 0 || pos >= cw * ch || visited[pos]) continue;
+                        visited[pos] = 1;
                         const idx = pos * 4;
-                        if (px[idx + 3] > 0) {
-                            const r = px[idx], g = px[idx + 1], b = px[idx + 2];
-                            const maxC = Math.max(r, g, b);
-                            if (maxC < 26 && (
-                                px[(pos - 1) * 4 + 3] === 0 ||
-                                px[(pos + 1) * 4 + 3] === 0 ||
-                                px[(pos - sw) * 4 + 3] === 0 ||
-                                px[(pos + sw) * 4 + 3] === 0
-                            )) {
-                                px[idx + 3] = 0;
+                        if (isBgGray(px[idx], px[idx + 1], px[idx + 2])) {
+                            px[idx + 3] = 0;
+                            const x = pos % cw;
+                            const y = (pos - x) / cw;
+                            if (x > 0) queue.push(pos - 1);
+                            if (x < cw - 1) queue.push(pos + 1);
+                            if (y > 0) queue.push(pos - cw);
+                            if (y < ch - 1) queue.push(pos + cw);
+                        }
+                    }
+
+                    // Clean 1px JPEG compression halo around keyed edges
+                    for (let pass = 0; pass < 2; pass++) {
+                        for (let y = 1; y < ch - 1; y++) {
+                            for (let x = 1; x < cw - 1; x++) {
+                                const pos = y * cw + x;
+                                const idx = pos * 4;
+                                if (px[idx + 3] > 0) {
+                                    const r = px[idx], g = px[idx + 1], b = px[idx + 2];
+                                    const touchesAlpha0 =
+                                        px[(pos - 1) * 4 + 3] === 0 ||
+                                        px[(pos + 1) * 4 + 3] === 0 ||
+                                        px[(pos - cw) * 4 + 3] === 0 ||
+                                        px[(pos + cw) * 4 + 3] === 0;
+                                    if (touchesAlpha0 && r >= 165 && g >= 165 && b >= 165 && Math.abs(r - g) <= 26 && Math.abs(g - b) <= 26) {
+                                        px[idx + 3] = 0;
+                                    }
+                                }
                             }
                         }
                     }
+
+                    // Brighten the mouse cursor arrow inside interact_cursor so it pops crisp white
+                    if (def.cursorWhiteBox) {
+                        const [cx1, cy1, cx2, cy2] = def.cursorWhiteBox;
+                        for (let y = cy1; y <= cy2; y++) {
+                            for (let x = cx1; x <= cx2; x++) {
+                                const pos = y * cw + x;
+                                const idx = pos * 4;
+                                if (px[idx + 3] > 0 && isBgGray(px[idx], px[idx + 1], px[idx + 2])) {
+                                    px[idx] = 250;
+                                    px[idx + 1] = 252;
+                                    px[idx + 2] = 255;
+                                }
+                            }
+                        }
+                    }
+
+                    ctx.putImageData(imgData, 0, 0);
+                    capriSprites[key] = c.toDataURL('image/png');
                 }
 
-                sCtx.putImageData(sData, 0, 0);
-                const capriSpriteUrl = sCanvas.toDataURL('image/png');
+                const capriSpriteUrl = capriSprites.idle_sit_1;
 
                 // 2. Inject Cyberpunk: Edgerunners Season 2 — CAPRI Theme CSS (Matched to her Crimson-Pink + Toxic Green + Void-Violet Sprite)
                 let style = document.getElementById('custom-antigravity-theme');
@@ -644,8 +694,8 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
 
                     .capri-sprite-wrapper {
                         position: relative !important;
-                        width: 98px !important;
-                        height: 120px !important;
+                        width: 112px !important;
+                        height: 126px !important;
                         pointer-events: auto !important;
                         cursor: pointer !important;
                         display: flex !important;
@@ -670,6 +720,7 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         width: 100% !important;
                         height: 100% !important;
                         object-fit: contain !important;
+                        image-rendering: pixelated !important;
                         pointer-events: none !important;
                         transform-origin: bottom center !important;
                     }
@@ -681,6 +732,7 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         width: 100% !important;
                         height: 100% !important;
                         object-fit: contain !important;
+                        image-rendering: pixelated !important;
                         pointer-events: none !important;
                         opacity: 0 !important;
                         z-index: 1 !important;
@@ -1116,6 +1168,12 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                             <button type="button" class="capri-cmd-btn" id="capri-btn-top-popout">
                                 <span>🙃 Top Pop-Out</span>
                             </button>
+                            <button type="button" class="capri-cmd-btn" id="capri-btn-pet">
+                                <span>💖 Pet / Poke</span>
+                            </button>
+                            <button type="button" class="capri-cmd-btn" id="capri-btn-activity">
+                                <span>🎮 Play / Pose</span>
+                            </button>
                             <button type="button" class="capri-cmd-btn" id="capri-btn-chat" style="grid-column: span 2;">
                                 <span>💬 Let's Have a Little Chat</span>
                             </button>
@@ -1124,9 +1182,9 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                             <input type="text" id="capri-cmd-input" placeholder="Command or chat with Capri..." autocomplete="off" />
                             <button type="submit" id="capri-cmd-send">SEND</button>
                         </form>
-                        <div class="capri-cmd-hint">Try: "pop out", "stop moving", "stop attack", "zap", or chat!</div>
+                        <div class="capri-cmd-hint">Try: "laptop", "ball", "handstand", "peek", "meditate", "lounge", "sleep", "pet", "dizzy", or chat!</div>
                     </div>
-                    <div class="capri-sprite-wrapper" title="Left-Click: Talk | Right-Click: Neural Command Menu">
+                    <div class="capri-sprite-wrapper" title="Left-Click: Poke/Talk | Rub Mouse: Pet | Drag: Grab Cursor | Right-Click: Neural Menu">
                         <img class="capri-ghost-img capri-ghost-green" src="\${capriSpriteUrl}" alt="" />
                         <img class="capri-ghost-img capri-ghost-pink" src="\${capriSpriteUrl}" alt="" />
                         <img class="capri-sprite-img" src="\${capriSpriteUrl}" alt="Capri" />
@@ -1165,11 +1223,22 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                 const btnToggleAttack = capriRoot.querySelector('#capri-btn-toggle-attack');
                 const btnZapNow = capriRoot.querySelector('#capri-btn-zap-now');
                 const btnTopPopout = capriRoot.querySelector('#capri-btn-top-popout');
+                const btnPet = capriRoot.querySelector('#capri-btn-pet');
+                const btnActivity = capriRoot.querySelector('#capri-btn-activity');
                 const btnChat = capriRoot.querySelector('#capri-btn-chat');
                 const moveLabel = capriRoot.querySelector('#capri-move-label');
                 const attackLabel = capriRoot.querySelector('#capri-attack-label');
                 const cmdForm = capriRoot.querySelector('#capri-cmd-form');
                 const cmdInput = capriRoot.querySelector('#capri-cmd-input');
+
+                let currentSpriteKey = 'idle_sit_1';
+                function setCapriSprite(poseKey) {
+                    if (!capriSprites[poseKey] || currentSpriteKey === poseKey) return;
+                    currentSpriteKey = poseKey;
+                    const url = capriSprites[poseKey];
+                    spriteImg.src = url;
+                    ghostImgs.forEach(g => { g.src = url; });
+                }
 
                 // 4. Capri Dialogue Lines (Verbatim Show Lines + Edgerunners S2 Persona)
                 const clickQuotes = [
@@ -1266,23 +1335,74 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     }
                 }
 
-                // 6. Capri Wandering State Machine (Walks & attacks much less frequently, with more expressive poses & talking!)
+                // 6. Capri Wandering & 13-Pose Desktop Pet State Machine
+                const IDLE_STYLES = ['sit_swing', 'meditate', 'lounge', 'sleepy'];
+                const PLAY_POSES = ['play_laptop', 'play_ball', 'play_handstand', 'play_peek'];
+                const INTERACT_POSES = ['interact_love', 'interact_tickle', 'interact_dizzy', 'interact_cursor'];
+
                 const state = {
                     x: window.innerWidth - 150,
                     y: window.innerHeight - 165,
                     targetX: window.innerWidth - 280,
                     targetY: window.innerHeight - 165,
-                    speed: 0.82, // Calmer, smoother stroll speed
+                    speed: 0.85,
                     facing: -1, // -1 left, 1 right
-                    mode: 'idle', // 'walk' | 'idle' | 'talk' | 'pose' | 'cast' | 'drag'
-                    modeTimer: 780, // ~13 seconds of calm idle before walking
-                    zapCooldown: 4200, // ~70 seconds between autonomous lightning attacks (much less frequent!)
-                    mutterCooldown: 2700, // ~45 seconds between occasional idle thoughts/poses
-                    topPopoutCooldown: 3300, // ~55 seconds between autonomous Top-of-Antigravity ceiling pop-outs
+                    mode: 'idle', // 'walk' | 'idle' | 'talk' | 'pose' | 'cast' | 'drag' | 'interact'
+                    idleStyle: 'sit_swing',
+                    idleSubTimer: 360,
+                    activePoseKey: 'idle_sit_1',
+                    frameTick: 0,
+                    modeTimer: 780,
+                    zapCooldown: 4200,
+                    mutterCooldown: 2700,
+                    topPopoutCooldown: 3300,
                     isTopPopoutActive: false,
                     moveEnabled: true,
                     attackEnabled: true
                 };
+
+                let interactIdx = 0;
+                let playIdx = 0;
+
+                function triggerCapriActivity(specificPose = null) {
+                    const chosen = specificPose || PLAY_POSES[playIdx % PLAY_POSES.length];
+                    if (!specificPose) playIdx++;
+                    state.mode = 'pose';
+                    state.activePoseKey = chosen;
+                    state.modeTimer = 320;
+                    capriRoot.className = 'capri-posing';
+                    setCapriSprite(chosen);
+                    spawnElectricBurst(state.x + 54, state.y + 58, 7, 60);
+
+                    const activityLines = {
+                        play_laptop: "Hacking straight into your Antigravity workspace DOM, choom! Twelve psyches typing at 900 WPM~",
+                        play_ball: "Juggling a pure Blackwall glitch-orb! Careful—drop this and it formats your C: drive, hahaha!",
+                        play_handstand: "One-handed construct handstand! Zero-gravity cyberware gymnastics, baby!",
+                        play_peek: "Peek-a-boo, host~ Just keeping all twelve pairs of eyes on your code!"
+                    };
+                    if (activityLines[chosen]) {
+                        sayCapriLine(activityLines[chosen], 4800, false);
+                    }
+                }
+
+                function triggerCapriInteract(specificPose = null, customLine = null) {
+                    const chosen = specificPose || INTERACT_POSES[interactIdx % INTERACT_POSES.length];
+                    if (!specificPose) interactIdx++;
+                    state.mode = 'interact';
+                    state.activePoseKey = chosen;
+                    state.modeTimer = 240;
+                    capriRoot.className = 'capri-talking';
+                    setCapriSprite(chosen);
+                    spawnElectricBurst(state.x + 54, state.y + 58, 8, 65);
+
+                    const interactLines = {
+                        interact_love: "Aww, headpats for an engram?! All twelve psyches inside me are purring at 40,000 volts, choom~ 💖",
+                        interact_tickle: "Bahahaha! Hey—quit poking my neural ribs, that tickles my bio-chip!",
+                        interact_dizzy: "Whoa, whoa! You're spinning my optics into spiral-mode, host! @ _ @ ?",
+                        interact_cursor: "Gotcha! This little white mouse pointer is MINE now, choom! Try getting it back~"
+                    };
+                    sayCapriLine(customLine || interactLines[chosen] || clickQuotes[quoteIndex++ % clickQuotes.length], 4800, false);
+                }
 
                 const topPopoutCaptions = [
                     "“ Hey now, don't 'her' me, buddy! Just call me... CAPRI! ”",
@@ -1375,13 +1495,15 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     state.moveEnabled = enabled;
                     if (!enabled) {
                         state.mode = 'idle';
+                        state.idleStyle = 'lounge';
+                        setCapriSprite('idle_lounge');
                         capriRoot.className = 'capri-idle';
-                        sayCapriLine("Fine, fine! Parking my boots right here, choom. Happy now?!", 4200);
+                        sayCapriLine("Fine, fine! Lounging on my glitch-block right here, choom. Happy now?!", 4200, false);
                     } else {
                         pickPerimeterTarget();
                         state.mode = 'walk';
                         capriRoot.className = 'capri-walking';
-                        sayCapriLine("Legs unlocked! Time to stretch these digital servos~", 4000);
+                        sayCapriLine("Legs unlocked! Time to stretch these digital servos~", 4000, false);
                     }
                     syncMenuUI();
                 }
@@ -1427,15 +1549,84 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         sayCapriLine("You asked for it, choom! Maximum amperage right on target!", 4200);
                         return;
                     }
-                    if (low === 'pose' || low.includes('dance') || low.includes('spin') || low.includes('glitch')) {
-                        state.mode = 'pose';
-                        state.modeTimer = 150;
-                        capriRoot.className = 'capri-posing';
-                        spawnElectricBurst(state.x + 48, state.y + 55, 8, 65);
-                        sayCapriLine("Check out the holographic afterimages, choom! Twelve psyches, zero gravity, 100% style~", 4800, false);
+                    // Specific 13-pose commands
+                    if (low.includes('laptop') || low.includes('code') || low.includes('hack') || low.includes('type')) {
+                        triggerCapriActivity('play_laptop');
                         return;
                     }
-                    if (low.includes('pop out') || low.includes('popout') || low.includes('peek') || low === 'top' || low.includes('ceiling') || low.includes('upside down')) {
+                    if (low.includes('ball') || low.includes('orb') || low.includes('juggle')) {
+                        triggerCapriActivity('play_ball');
+                        return;
+                    }
+                    if (low.includes('handstand') || low.includes('flip') || low.includes('cartwheel') || low.includes('gym')) {
+                        triggerCapriActivity('play_handstand');
+                        return;
+                    }
+                    if (low === 'peek' || low.includes('ledge') || low.includes('hide')) {
+                        triggerCapriActivity('play_peek');
+                        return;
+                    }
+                    if (low.includes('meditat') || low.includes('float') || low.includes('zen') || low.includes('lotus')) {
+                        state.mode = 'idle';
+                        state.idleStyle = 'meditate';
+                        state.idleSubTimer = 600;
+                        state.modeTimer = 600;
+                        setCapriSprite('idle_meditate');
+                        capriRoot.className = 'capri-idle';
+                        sayCapriLine("Om~ Aligning all twelve digitized chakras in zero-G, choom...", 4500, false);
+                        return;
+                    }
+                    if (low.includes('lounge') || low.includes('relax') || low.includes('chill')) {
+                        state.mode = 'idle';
+                        state.idleStyle = 'lounge';
+                        state.idleSubTimer = 600;
+                        state.modeTimer = 600;
+                        setCapriSprite('idle_lounge');
+                        capriRoot.className = 'capri-idle';
+                        sayCapriLine("Kicking back on a corrupted memory block. Wake me when we're raiding Arasaka~", 4500, false);
+                        return;
+                    }
+                    if (low.includes('sleep') || low.includes('yawn') || low.includes('nap') || low.includes('tired') || low.includes('zzz')) {
+                        state.mode = 'idle';
+                        state.idleStyle = 'sleepy';
+                        state.idleSubTimer = 600;
+                        state.modeTimer = 600;
+                        setCapriSprite('idle_sleepy');
+                        capriRoot.className = 'capri-idle';
+                        sayCapriLine("*Yaaawn* zZz... Eating your nightmares makes a construct sleepy, choom...", 4800, false);
+                        return;
+                    }
+                    if (low === 'sit' || low.includes('swing')) {
+                        state.mode = 'idle';
+                        state.idleStyle = 'sit_swing';
+                        state.idleSubTimer = 600;
+                        state.modeTimer = 600;
+                        setCapriSprite('idle_sit_1');
+                        capriRoot.className = 'capri-idle';
+                        sayCapriLine("Just swinging my boots and watching you work, host~", 4200, false);
+                        return;
+                    }
+                    if (low.includes('pet') || low.includes('headpat') || low.includes('heart')) {
+                        triggerCapriInteract('interact_love');
+                        return;
+                    }
+                    if (low.includes('tickle') || low.includes('poke') || low.includes('laugh')) {
+                        triggerCapriInteract('interact_tickle');
+                        return;
+                    }
+                    if (low.includes('dizzy') || low.includes('confus') || low.includes('spiral')) {
+                        triggerCapriInteract('interact_dizzy');
+                        return;
+                    }
+                    if (low.includes('cursor') || low.includes('mouse') || low.includes('grab') || low.includes('bite')) {
+                        triggerCapriInteract('interact_cursor');
+                        return;
+                    }
+                    if (low === 'pose' || low === 'play' || low.includes('dance') || low.includes('spin') || low.includes('glitch')) {
+                        triggerCapriActivity();
+                        return;
+                    }
+                    if (low.includes('pop out') || low.includes('popout') || low === 'top' || low.includes('ceiling') || low.includes('upside down')) {
                         triggerTopPopout();
                         return;
                     }
@@ -1460,7 +1651,8 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     } else if (low.includes('joke') || low.includes('funny')) {
                         reply = "Wanna hear a joke? Roman asking if I'm just a weapon! Hahaha! Does a weapon look this fabulous in neon green and crimson?!";
                     } else if (low.includes('love') || low.includes('cute') || low.includes('cool') || low.includes('preem') || low.includes('beautiful')) {
-                        reply = "'Rolled into one, beautiful me'—glad you noticed, choom! Maybe I'll only fry half your UI today~";
+                        triggerCapriInteract('interact_love', "'Rolled into one, beautiful me'—glad you noticed, choom! Maybe I'll only fry half your UI today~ 💖");
+                        return;
                     } else if (low.includes('chat') || low.includes('talk')) {
                         const chatOpeners = [
                             "Ooooh, a little heart-to-engram chat? Spill it, choom! What's cooking in that chrome skull of yours?",
@@ -1484,15 +1676,10 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                 function pickPerimeterTarget() {
                     const w = window.innerWidth;
                     const h = window.innerHeight;
-                    // Keep Capri along the bottom rail, right edge, or top-right/left margins so the center chat remains clear!
                     const zones = [
-                        // Bottom rail (left of send button to sidebar edge)
                         { x: 270 + Math.random() * Math.max(200, w - 430), y: h - 145 - Math.random() * 35 },
-                        // Right margin patrol
                         { x: w - 135 - Math.random() * 45, y: 80 + Math.random() * Math.max(150, h - 240) },
-                        // Left chat margin (just right of sidebar)
                         { x: 265 + Math.random() * 45, y: 90 + Math.random() * Math.max(150, h - 250) },
-                        // Top bar promenade
                         { x: 300 + Math.random() * Math.max(200, w - 460), y: 48 + Math.random() * 25 }
                     ];
                     const chosen = zones[Math.floor(Math.random() * zones.length)];
@@ -1519,7 +1706,8 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     const hitY = rect.top + rect.height * (0.2 + Math.random() * 0.6);
 
                     state.mode = 'cast';
-                    state.modeTimer = 55;
+                    state.modeTimer = 65;
+                    setCapriSprite('play_ball');
                     capriRoot.className = 'capri-casting';
 
                     // Fire dual green + magenta lightning bolts from Capri to the chat box!
@@ -1541,15 +1729,42 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
 
                     if (Math.random() < 0.55) {
                         const zLine = zapQuotes[Math.floor(Math.random() * zapQuotes.length)];
-                        sayCapriLine(zLine, 3400);
+                        sayCapriLine(zLine, 3400, false);
                     }
                 }
 
-                // 7. Click & Drag + Click to Talk
+                // 7. Click, Drag (Grabs Mouse Cursor!), & Petting (Rubbing Mouse Over Capri!)
                 let isDragging = false;
                 let dragMoved = false;
                 let dragOffsetX = 0;
                 let dragOffsetY = 0;
+                let petStrokes = 0;
+                let lastPetDir = 0;
+                let lastPetX = 0;
+                let lastPetTime = 0;
+
+                const onSpriteMouseMove = (e) => {
+                    if (isDragging) return;
+                    const now = performance.now();
+                    if (now - lastPetTime > 700) {
+                        petStrokes = 0;
+                    }
+                    const dx = e.clientX - lastPetX;
+                    if (Math.abs(dx) > 6) {
+                        const dir = dx > 0 ? 1 : -1;
+                        if (dir !== lastPetDir) {
+                            lastPetDir = dir;
+                            petStrokes++;
+                            lastPetTime = now;
+                            if (petStrokes >= 5) {
+                                petStrokes = 0;
+                                const petPose = Math.random() < 0.65 ? 'interact_love' : 'interact_tickle';
+                                triggerCapriInteract(petPose);
+                            }
+                        }
+                        lastPetX = e.clientX;
+                    }
+                };
 
                 const onMouseDown = (e) => {
                     if (e.button !== 0) return;
@@ -1558,17 +1773,25 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     dragOffsetX = e.clientX - state.x;
                     dragOffsetY = e.clientY - state.y;
                     state.mode = 'drag';
+                    setCapriSprite('interact_cursor');
                 };
 
                 const onMouseMove = (e) => {
                     if (isDragging) {
                         const nx = e.clientX - dragOffsetX;
                         const ny = e.clientY - dragOffsetY;
-                        if (Math.hypot(nx - state.x, ny - state.y) > 4) {
+                        const stepDist = Math.hypot(nx - state.x, ny - state.y);
+                        if (stepDist > 4) {
                             dragMoved = true;
                         }
-                        state.x = Math.max(10, Math.min(window.innerWidth - 105, nx));
-                        state.y = Math.max(10, Math.min(window.innerHeight - 125, ny));
+                        // If shaken rapidly while dragging, show dizzy spiral eyes!
+                        if (stepDist > 26) {
+                            setCapriSprite('interact_dizzy');
+                        } else if (dragMoved) {
+                            setCapriSprite('interact_cursor');
+                        }
+                        state.x = Math.max(10, Math.min(window.innerWidth - 115, nx));
+                        state.y = Math.max(10, Math.min(window.innerHeight - 130, ny));
                     }
                 };
 
@@ -1576,17 +1799,17 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     if (!isDragging) return;
                     isDragging = false;
                     if (!dragMoved) {
-                        // Clicked Capri! Speak a characteristic Capri line + electric burst!
+                        // Left-Clicked (Poked) Capri! Cycle through her 4 INTERACTING sprites + voice lines!
+                        const pose = INTERACT_POSES[interactIdx % INTERACT_POSES.length];
+                        interactIdx++;
                         const line = clickQuotes[quoteIndex % clickQuotes.length];
                         quoteIndex++;
-                        sayCapriLine(line, 5200);
-                        spawnElectricBurst(state.x + 48, state.y + 55, 10, 75);
-                        state.mode = 'cast';
-                        state.modeTimer = 45;
-                        capriRoot.className = 'capri-casting';
+                        triggerCapriInteract(pose, line);
                     } else {
                         state.mode = 'idle';
-                        state.modeTimer = 90;
+                        state.idleStyle = 'sit_swing';
+                        state.modeTimer = 180;
+                        setCapriSprite('idle_sit_1');
                         capriRoot.className = 'capri-idle';
                     }
                 };
@@ -1621,7 +1844,19 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     e.stopPropagation();
                     contextMenu.classList.remove('open');
                     triggerCapriChatBoxZap();
-                    sayCapriLine("Manual override accepted! Eat green lightning, chat box!", 4200);
+                    sayCapriLine("Manual override accepted! Eat green lightning, chat box!", 4200, false);
+                });
+
+                btnPet.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    contextMenu.classList.remove('open');
+                    triggerCapriInteract();
+                });
+
+                btnActivity.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    contextMenu.classList.remove('open');
+                    triggerCapriActivity();
                 });
 
                 btnChat.addEventListener('click', (e) => {
@@ -1681,6 +1916,7 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                 };
 
                 spriteWrapper.addEventListener('mousedown', onMouseDown);
+                spriteWrapper.addEventListener('mousemove', onSpriteMouseMove);
                 spriteWrapper.addEventListener('contextmenu', onContextMenu);
                 window.addEventListener('mousemove', onMouseMove);
                 window.addEventListener('mouseup', onMouseUp);
@@ -1690,6 +1926,7 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
 
                 window.__capriCleanupListeners = () => {
                     spriteWrapper.removeEventListener('mousedown', onMouseDown);
+                    spriteWrapper.removeEventListener('mousemove', onSpriteMouseMove);
                     spriteWrapper.removeEventListener('contextmenu', onContextMenu);
                     window.removeEventListener('mousemove', onMouseMove);
                     window.removeEventListener('mouseup', onMouseUp);
@@ -1698,9 +1935,10 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     document.removeEventListener('mouseover', onDocumentMouseOver, true);
                 };
 
-                // 9. Main 60fps Animation Loop (Capri Walking, Expressive Poses, Talking + Lightning Rendering)
+                // 9. Main 60fps Animation Loop (13-Pose Sprite Cycling + Walking + Activities + Lightning)
                 function tick() {
-                    // Update Capri movement (respects state.moveEnabled, much calmer & less frequent walking)
+                    state.frameTick++;
+
                     if (!state.moveEnabled && state.mode === 'walk') {
                         state.mode = 'idle';
                         capriRoot.className = 'capri-idle';
@@ -1711,9 +1949,14 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         const dy = state.targetY - state.y;
                         const dist = Math.hypot(dx, dy);
 
+                        // Alternate stepping frames while walking
+                        const stepFrame = Math.floor(state.frameTick / 14) % 2 === 0 ? 'idle_sit_1' : 'idle_sit_2';
+                        setCapriSprite(stepFrame);
+
                         if (dist < 6) {
                             state.mode = 'idle';
-                            // Chill in idle for ~13 to 24 seconds (780..1440 frames) before next move!
+                            state.idleStyle = IDLE_STYLES[Math.floor(Math.random() * IDLE_STYLES.length)];
+                            state.idleSubTimer = 320 + Math.floor(Math.random() * 240);
                             state.modeTimer = 780 + Math.floor(Math.random() * 660);
                             capriRoot.className = 'capri-idle';
                         } else {
@@ -1722,13 +1965,35 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                             state.facing = dx < 0 ? -1 : 1;
                         }
                     } else if (state.mode === 'idle') {
+                        // Animate current idle & resting pose
+                        state.idleSubTimer--;
+                        if (state.idleSubTimer <= 0) {
+                            state.idleStyle = IDLE_STYLES[Math.floor(Math.random() * IDLE_STYLES.length)];
+                            state.idleSubTimer = 320 + Math.floor(Math.random() * 260);
+                        }
+
+                        if (state.idleStyle === 'sit_swing') {
+                            const swingFrame = Math.floor(state.frameTick / 28) % 2 === 0 ? 'idle_sit_1' : 'idle_sit_2';
+                            setCapriSprite(swingFrame);
+                        } else if (state.idleStyle === 'meditate') {
+                            setCapriSprite('idle_meditate');
+                        } else if (state.idleStyle === 'lounge') {
+                            setCapriSprite('idle_lounge');
+                        } else if (state.idleStyle === 'sleepy') {
+                            setCapriSprite('idle_sleepy');
+                        }
+
                         if (state.moveEnabled) {
                             state.modeTimer--;
                             if (state.modeTimer <= 0) {
-                                // 35% chance to do a dramatic zero-G holographic pose in place instead of walking
-                                if (Math.random() < 0.35) {
+                                // 45% chance to perform a PLAYING & ACTIVITIES pose (laptop, ball, handstand, peek)
+                                if (Math.random() < 0.45) {
+                                    const chosenPlay = PLAY_POSES[playIdx % PLAY_POSES.length];
+                                    playIdx++;
                                     state.mode = 'pose';
-                                    state.modeTimer = 140;
+                                    state.activePoseKey = chosenPlay;
+                                    state.modeTimer = 260;
+                                    setCapriSprite(chosenPlay);
                                     capriRoot.className = 'capri-posing';
                                 } else {
                                     pickPerimeterTarget();
@@ -1737,10 +2002,21 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                                 }
                             }
                         }
-                    } else if (state.mode === 'talk' || state.mode === 'pose' || state.mode === 'cast') {
+                    } else if (state.mode === 'talk') {
+                        // Expressive talking cycles gently between love/tickle/sit frames
+                        const talkFrame = Math.floor(state.frameTick / 20) % 2 === 0 ? 'interact_love' : 'interact_tickle';
+                        setCapriSprite(talkFrame);
                         state.modeTimer--;
                         if (state.modeTimer <= 0) {
                             state.mode = 'idle';
+                            state.modeTimer = 720 + Math.floor(Math.random() * 600);
+                            capriRoot.className = 'capri-idle';
+                        }
+                    } else if (state.mode === 'pose' || state.mode === 'cast' || state.mode === 'interact') {
+                        state.modeTimer--;
+                        if (state.modeTimer <= 0) {
+                            state.mode = 'idle';
+                            state.idleStyle = IDLE_STYLES[Math.floor(Math.random() * IDLE_STYLES.length)];
                             state.modeTimer = 720 + Math.floor(Math.random() * 600);
                             capriRoot.className = 'capri-idle';
                         }
@@ -1760,7 +2036,7 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         }
                     }
 
-                    // Autonomous Lightning Strike timer (respects state.attackEnabled — much less frequent: ~75 to 125 seconds)
+                    // Autonomous Lightning Strike timer (respects state.attackEnabled — ~75 to 125 seconds)
                     if (state.mode !== 'drag' && state.attackEnabled) {
                         state.zapCooldown--;
                         if (state.zapCooldown <= 0) {
