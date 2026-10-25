@@ -18,7 +18,7 @@ A collection of live-injected custom themes, animated `<canvas>`/video backgroun
    - `Capri\Apply_Capri_Theme.bat`
    - `Prescript\Apply_Prescript_Theme.bat`
    - `Eldritch_theme\Apply_Eldritch_Theme.bat`
-   - `Moonlit_Lotus_Skiff\Apply_Moonlit_Theme.bat`
+   - `Moonlit_Lotus_Skiff\Apply_Moonlit_Lotus_Skiff_Theme.bat`
 
 *(Or run via PowerShell)*:
 ```powershell
@@ -72,7 +72,7 @@ $env:ELECTRON_RUN_AS_NODE="1"
 
 ### 4. Moonlit Lotus Skiff
 - **Folder**: [`Moonlit_Lotus_Skiff/`](./Moonlit_Lotus_Skiff)
-- **Launcher**: [`Moonlit_Lotus_Skiff/Apply_Moonlit_Theme.bat`](./Moonlit_Lotus_Skiff/Apply_Moonlit_Theme.bat)
+- **Launcher**: [`Moonlit_Lotus_Skiff/Apply_Moonlit_Lotus_Skiff_Theme.bat`](./Moonlit_Lotus_Skiff/Apply_Moonlit_Lotus_Skiff_Theme.bat)
 - **Features**:
   - **Palette**: Serene moonlit night sky, warm lantern gold, and lotus pink glassmorphism.
   - **Live Video Wallpaper & Drifting Lantern Petals**: Smooth looping background video (`moonlit_bg.mp4`) paired with an interactive `<canvas>` particle layer of glowing lotus petals and fireflies.
