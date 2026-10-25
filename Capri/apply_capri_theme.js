@@ -83,7 +83,17 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
                 }
+                if (window.__eldritchHoverEyeAnimFrame) {
+                    cancelAnimationFrame(window.__eldritchHoverEyeAnimFrame);
+                    window.__eldritchHoverEyeAnimFrame = null;
+                }
+                if (window.__eldritchHoverCleanup) {
+                    window.__eldritchHoverCleanup();
+                    window.__eldritchHoverCleanup = null;
+                }
                 [
+                    'halibut-eye-demo-panel',
+                    'eldritch-hover-eye-popup',
                     'eldritch-bg-video',
                     'eldritch-vignette-overlay',
                     'eldritch-rift-header',

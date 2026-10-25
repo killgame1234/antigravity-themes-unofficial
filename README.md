@@ -18,6 +18,7 @@ A collection of live-injected custom themes, animated `<canvas>`/video backgroun
    - `Capri\Apply_Capri_Theme.bat`
    - `Prescript\Apply_Prescript_Theme.bat`
    - `Eldritch_theme\Apply_Eldritch_Theme.bat`
+   - `Moonlit_Lotus_Skiff\Apply_Moonlit_Theme.bat`
 
 *(Or run via PowerShell)*:
 ```powershell
@@ -61,9 +62,20 @@ $env:ELECTRON_RUN_AS_NODE="1"
 - **Folder**: [`Eldritch_theme/`](./Eldritch_theme)
 - **Launcher**: [`Eldritch_theme/Apply_Eldritch_Theme.bat`](./Eldritch_theme/Apply_Eldritch_Theme.bat)
 - **Features**:
-  - **Palette**: Deep abyssal void with crimson ocular horror glow (`#FF0033`).
-  - **Live Video Background**: Seamless looping video background (`eldritch_bg.mp4`) injected via in-memory Blob URL with dark vignette readability overlay.
-  - **Custom Ocular UI**: Features an animated Eldritch Eye header rift and custom stop button.
+  - **Palette**: Pitch-black OLED abyssal void with crimson ocular horror glow (`#FF1E38`).
+  - **Live Video Background & Ambient Eye Rifts**: Seamless looping video background (`eldritch_bg.mp4`) plus up to 3 random feathered ambient Eye Rifts that tear open at random angles, sizes, translucencies, and brightness in the background layer without blocking text.
+  - **Cursor-Tracking Hover Eyes**: Hovering buttons, links, pills, or cards spawns small crimson eyes around the element's perimeter whose pupils track your mouse cursor in real time.
+  - **Crimson Gradient & Selective Bleeding Text**: Animated crimson-ruby gradient typography with periodic selective crimson droplets dripping from random headings and bold text.
+  - **Blinking Header Eye & Ocular Buttons**: Centered blinking eye GIF (`eldritch_eye.gif`) in the titlebar with a seamless bleeding blend, plus animated Eldritch Eye icons on the Stop and Archive Conversation buttons.
+
+---
+
+### 4. Moonlit Lotus Skiff
+- **Folder**: [`Moonlit_Lotus_Skiff/`](./Moonlit_Lotus_Skiff)
+- **Launcher**: [`Moonlit_Lotus_Skiff/Apply_Moonlit_Theme.bat`](./Moonlit_Lotus_Skiff/Apply_Moonlit_Theme.bat)
+- **Features**:
+  - **Palette**: Serene moonlit night sky, warm lantern gold, and lotus pink glassmorphism.
+  - **Live Video Wallpaper & Drifting Lantern Petals**: Smooth looping background video (`moonlit_bg.mp4`) paired with an interactive `<canvas>` particle layer of glowing lotus petals and fireflies.
 
 ---
 

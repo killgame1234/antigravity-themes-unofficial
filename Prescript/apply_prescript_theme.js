@@ -67,6 +67,10 @@ function injectIntoPage(wsUrl, imgBase64) {
                     cancelAnimationFrame(window.__capriAnimFrame);
                     window.__capriAnimFrame = null;
                 }
+                if (window.__moonlitAnimFrame) {
+                    cancelAnimationFrame(window.__moonlitAnimFrame);
+                    window.__moonlitAnimFrame = null;
+                }
                 if (window.__capriCleanupListeners) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
@@ -75,7 +79,17 @@ function injectIntoPage(wsUrl, imgBase64) {
                     clearTimeout(window.__capriTopPopoutTimer);
                     window.__capriTopPopoutTimer = null;
                 }
+                if (window.__eldritchHoverEyeAnimFrame) {
+                    cancelAnimationFrame(window.__eldritchHoverEyeAnimFrame);
+                    window.__eldritchHoverEyeAnimFrame = null;
+                }
+                if (window.__eldritchHoverCleanup) {
+                    window.__eldritchHoverCleanup();
+                    window.__eldritchHoverCleanup = null;
+                }
                 [
+                    'halibut-eye-demo-panel',
+                    'eldritch-hover-eye-popup',
                     'eldritch-bg-video',
                     'eldritch-vignette-overlay',
                     'eldritch-rift-header',
@@ -85,7 +99,10 @@ function injectIntoPage(wsUrl, imgBase64) {
                     'prescript-header-insignia',
                     'capri-companion-root',
                     'capri-lightning-canvas',
-                    'capri-top-popout'
+                    'capri-top-popout',
+                    'moonlit-bg-video',
+                    'moonlit-vignette-overlay',
+                    'moonlit-particles-canvas'
                 ].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.remove();
