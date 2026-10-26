@@ -747,25 +747,88 @@ function injectIntoPage(wsUrl, imgBase64) {
                         border-radius: 9999px !important;
                         box-shadow: 0 0 8px rgba(0, 229, 255, 0.6) !important;
                     }
+
+                    /* ==========================================================================
+                       PRESCRIPT MONOSPACE TYPEWRITER HOVER STYLES
+                       ========================================================================== */
+                    .prescript-hover-active {
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                        color: rgba(130, 238, 255, 0.98) !important;
+                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75), 0 0 20px rgba(0, 229, 255, 0.35) !important;
+                        letter-spacing: 0.04em !important;
+                    }
+
+                    .prescript-wrapper {
+                        display: inline-block !important;
+                        text-align: left !important;
+                        vertical-align: baseline !important;
+                        white-space: inherit !important;
+                        max-width: 100% !important;
+                    }
+
+                    .prescript-typed {
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                        color: rgba(130, 238, 255, 0.98) !important;
+                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75) !important;
+                        white-space: inherit !important;
+                    }
+
+                    .prescript-cursor {
+                        display: inline-block !important;
+                        width: 0 !important;
+                        overflow: visible !important;
+                        color: #00F0FF !important;
+                        text-shadow: 0 0 12px rgba(0, 240, 255, 0.95), 0 0 24px rgba(0, 229, 255, 0.8) !important;
+                        user-select: none !important;
+                        pointer-events: none !important;
+                        vertical-align: baseline !important;
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                    }
+
+                    .prescript-ghost {
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        user-select: none !important;
+                        pointer-events: none !important;
+                        white-space: inherit !important;
+                    }
                 \`;
 
 
                 // 6. Interactive Prescript Typewriter Hover Effect
                 // Automatically types out text on hover using the exact font, color, and ▮ cursor as the background Prescript decree
-                function getLeafTextElement(el) {
-                    if (!el || el.closest('.prescript-bg-decree-caption') || el.closest('#prescript-hand-bg')) return null;
-                    if (el.children.length === 0) {
-                        const txt = el.textContent.trim();
-                        return (txt.length > 0 && txt.length <= 180) ? el : null;
-                    }
-                    const leaves = el.querySelectorAll('span, p, h1, h2, h3, h4, .truncate');
-                    for (const leaf of leaves) {
-                        if (leaf.children.length === 0) {
-                            const txt = leaf.textContent.trim();
-                            if (txt.length > 0 && txt.length <= 180) {
-                                return leaf;
-                            }
-                        }
+                function escapePrescriptHtml(str) {
+                    if (!str) return '';
+                    return str
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                }
+
+                function isEligibleTextLeaf(node) {
+                    if (!node || !(node instanceof HTMLElement)) return false;
+                    const tag = node.tagName.toLowerCase();
+                    if (tag === 'input' || tag === 'textarea' || tag === 'script' || tag === 'style' || node.isContentEditable) return false;
+                    if (node.closest('#prescript-hand-bg') || node.closest('.prescript-bg-decree-caption') || node.closest('#prescript-fate-canvas') || node.closest('#prescript-vignette-overlay')) return false;
+                    if (tag === 'svg' || tag === 'path' || node.closest('svg')) return false;
+
+                    const txt = node.textContent;
+                    if (!txt || !txt.trim()) return false;
+                    if (txt.trim().length > 10000) return false;
+
+                    if (node.children.length === 0) return true;
+                    return false;
+                }
+
+                function getLeafTextElement(target) {
+                    if (!target) return null;
+                    if (isEligibleTextLeaf(target)) return target;
+
+                    const candidates = target.querySelectorAll('span, p, a, button, h1, h2, h3, h4, h5, h6, li, code, div, strong, b, .truncate');
+                    for (const c of candidates) {
+                        if (isEligibleTextLeaf(c)) return c;
                     }
                     return null;
                 }
@@ -775,31 +838,42 @@ function injectIntoPage(wsUrl, imgBase64) {
                 function startTypewriter(el) {
                     if (!el || el.__prescriptTyping) return;
                     const rawText = el.dataset.prescriptOriginalText || el.textContent;
-                    if (!rawText || rawText.trim().length === 0) return;
+                    if (!rawText || !rawText.trim()) return;
 
                     el.dataset.prescriptOriginalText = rawText;
                     el.__prescriptTyping = true;
                     el.classList.add('prescript-hover-active');
 
-                    let i = 0;
-                    const stepSize = Math.max(1, Math.ceil(rawText.length / 16));
-                    el.textContent = '▮';
+                    // Dynamic duration: snappy for short words, smooth and non-blocking for long text
+                    const totalDuration = Math.min(500, Math.max(160, rawText.length * 3));
+                    const interval = 16;
+                    const totalFrames = Math.max(1, Math.round(totalDuration / interval));
+                    const stepSize = Math.max(1, Math.ceil(rawText.length / totalFrames));
 
-                    function tick() {
+                    let i = 0;
+
+                    function renderStep() {
                         if (!el.isConnected || !el.__prescriptTyping) {
                             resetTypewriter(el);
                             return;
                         }
+
                         i += stepSize;
                         if (i < rawText.length) {
-                            el.textContent = rawText.slice(0, i) + '▮';
-                            el.__prescriptTimer = setTimeout(tick, 18);
+                            const typed = rawText.slice(0, i);
+                            const untyped = rawText.slice(i);
+                            el.innerHTML = '<span class="prescript-wrapper"><span class="prescript-typed">' + escapePrescriptHtml(typed) + '</span><span class="prescript-cursor">▮</span><span class="prescript-ghost">' + escapePrescriptHtml(untyped) + '</span></span>';
+                            el.__prescriptTimer = setTimeout(renderStep, interval);
                         } else {
-                            el.textContent = rawText;
+                            el.innerHTML = '<span class="prescript-wrapper"><span class="prescript-typed">' + escapePrescriptHtml(rawText) + '</span></span>';
                             el.__prescriptTimer = null;
                         }
                     }
-                    el.__prescriptTimer = setTimeout(tick, 18);
+
+                    // Initial Frame: Ghost preserves 100% of the element's layout width & alignment.
+                    // The zero-width cursor starts at the left, completely eliminating loading from the right!
+                    el.innerHTML = '<span class="prescript-wrapper"><span class="prescript-cursor">▮</span><span class="prescript-ghost">' + escapePrescriptHtml(rawText) + '</span></span>';
+                    el.__prescriptTimer = setTimeout(renderStep, interval);
                 }
 
                 function resetTypewriter(el) {
@@ -809,14 +883,15 @@ function injectIntoPage(wsUrl, imgBase64) {
                         el.__prescriptTimer = null;
                     }
                     el.__prescriptTyping = false;
-                    if (el.dataset.prescriptOriginalText) {
+                    if (el.dataset.prescriptOriginalText !== undefined) {
                         el.textContent = el.dataset.prescriptOriginalText;
+                        delete el.dataset.prescriptOriginalText;
                     }
                     el.classList.remove('prescript-hover-active');
                 }
 
                 const onPrescriptMouseOver = (e) => {
-                    const candidate = e.target.closest('button, a, [role="button"], [role="menuitem"], div[data-testid="conversation-row-sidebar"], h1, h2, h3, h4, .inline-pill, p, strong, b');
+                    const candidate = e.target.closest('button, a, [role="button"], [role="menuitem"], div[data-testid="conversation-row-sidebar"], h1, h2, h3, h4, h5, h6, .inline-pill, p, li, strong, b, code, .truncate, div.whitespace-pre-wrap');
                     const leaf = getLeafTextElement(candidate || e.target);
                     if (!leaf) return;
 
