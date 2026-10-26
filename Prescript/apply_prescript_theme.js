@@ -75,6 +75,14 @@ function injectIntoPage(wsUrl, imgBase64) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
                 }
+                if (window.__moonlitCleanupListeners) {
+                    window.__moonlitCleanupListeners();
+                    window.__moonlitCleanupListeners = null;
+                }
+                if (window.__prescriptCleanupListeners) {
+                    window.__prescriptCleanupListeners();
+                    window.__prescriptCleanupListeners = null;
+                }
                 if (window.__capriTopPopoutTimer) {
                     clearTimeout(window.__capriTopPopoutTimer);
                     window.__capriTopPopoutTimer = null;
@@ -90,6 +98,7 @@ function injectIntoPage(wsUrl, imgBase64) {
                 [
                     'halibut-eye-demo-panel',
                     'eldritch-hover-eye-popup',
+                    'eldritch-ambient-rifts-canvas',
                     'eldritch-bg-video',
                     'eldritch-vignette-overlay',
                     'eldritch-rift-header',
@@ -105,7 +114,12 @@ function injectIntoPage(wsUrl, imgBase64) {
                     'moonlit-particles-canvas'
                 ].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.remove();
+                    if (el) {
+                        if (el.dataset && el.dataset.oldBlobUrl) {
+                            try { URL.revokeObjectURL(el.dataset.oldBlobUrl); } catch (e) {}
+                        }
+                        el.remove();
+                    }
                 });
                 document.querySelectorAll('.eldritch-stop-eye-svg, .prescript-stop-seal-svg').forEach(el => el.remove());
 
@@ -285,6 +299,32 @@ function injectIntoPage(wsUrl, imgBase64) {
                 }
                 resizeCanvas();
                 window.addEventListener('resize', resizeCanvas);
+                window.__prescriptCleanupListeners = () => {
+                    window.removeEventListener('resize', resizeCanvas);
+                };
+
+                // Pre-rendered offscreen gradient sprites to eliminate 2,000+ GC gradient allocations/sec
+                const cyanGlowCanvas = document.createElement('canvas');
+                cyanGlowCanvas.width = 4;
+                cyanGlowCanvas.height = 128;
+                const cGlowCtx = cyanGlowCanvas.getContext('2d');
+                const cGrad = cGlowCtx.createLinearGradient(0, 0, 0, 128);
+                cGrad.addColorStop(0, 'rgba(0, 229, 255, 0)');
+                cGrad.addColorStop(0.75, 'rgba(80, 248, 255, 1)');
+                cGrad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+                cGlowCtx.fillStyle = cGrad;
+                cGlowCtx.fillRect(0, 0, 4, 128);
+
+                const goldGlowCanvas = document.createElement('canvas');
+                goldGlowCanvas.width = 4;
+                goldGlowCanvas.height = 128;
+                const gGlowCtx = goldGlowCanvas.getContext('2d');
+                const gGrad = gGlowCtx.createLinearGradient(0, 0, 0, 128);
+                gGrad.addColorStop(0, 'rgba(212, 175, 55, 0)');
+                gGrad.addColorStop(0.7, 'rgba(243, 229, 171, 1)');
+                gGrad.addColorStop(1, 'rgba(212, 175, 55, 0)');
+                gGlowCtx.fillStyle = gGrad;
+                gGlowCtx.fillRect(0, 0, 4, 128);
 
                 const threadCount = 34;
                 const threads = Array.from({ length: threadCount }, (_, i) => ({
@@ -298,6 +338,11 @@ function injectIntoPage(wsUrl, imgBase64) {
                 }));
 
                 function renderFateStrings(now) {
+                    if (document.hidden) {
+                        window.__prescriptAnimFrame = requestAnimationFrame(renderFateStrings);
+                        return;
+                    }
+
                     const w = fateCanvas.width;
                     const h = fateCanvas.height;
                     ctx.clearRect(0, 0, w, h);
@@ -319,23 +364,21 @@ function injectIntoPage(wsUrl, imgBase64) {
                         th.dropY = (th.dropY + th.speed) % (h + th.dropLen);
                         const yEnd = th.dropY;
                         const yStart = yEnd - th.dropLen;
+                        const pulseTop = Math.max(0, yStart);
+                        const pulseBottom = Math.min(h, yEnd);
+                        const pulseHeight = pulseBottom - pulseTop;
 
-                        const pulseGrad = ctx.createLinearGradient(x, yStart, x, yEnd);
-                        if (th.isGold) {
-                            pulseGrad.addColorStop(0, 'rgba(212, 175, 55, 0)');
-                            pulseGrad.addColorStop(0.7, \`rgba(243, 229, 171, \${baseAlpha * 1.7})\`);
-                            pulseGrad.addColorStop(1, 'rgba(212, 175, 55, 0)');
-                        } else {
-                            pulseGrad.addColorStop(0, 'rgba(0, 229, 255, 0)');
-                            pulseGrad.addColorStop(0.75, \`rgba(80, 248, 255, \${baseAlpha * 2.0})\`);
-                            pulseGrad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+                        if (pulseHeight > 0) {
+                            ctx.globalAlpha = Math.min(1.0, baseAlpha * (th.isGold ? 1.7 : 2.0));
+                            ctx.drawImage(
+                                th.isGold ? goldGlowCanvas : cyanGlowCanvas,
+                                x - 1,
+                                pulseTop,
+                                2,
+                                pulseHeight
+                            );
+                            ctx.globalAlpha = 1.0;
                         }
-                        ctx.beginPath();
-                        ctx.moveTo(x, Math.max(0, yStart));
-                        ctx.lineTo(x, Math.min(h, yEnd));
-                        ctx.strokeStyle = pulseGrad;
-                        ctx.lineWidth = 1.4;
-                        ctx.stroke();
                     }
 
                     window.__prescriptAnimFrame = requestAnimationFrame(renderFateStrings);
@@ -384,6 +427,8 @@ function injectIntoPage(wsUrl, imgBase64) {
                         z-index: 0 !important;
                         pointer-events: none !important;
                         opacity: 0.85 !important;
+                        contain: strict !important;
+                        will-change: contents !important;
                     }
 
                     #prescript-hand-bg {

@@ -83,6 +83,14 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
                 }
+                if (window.__moonlitCleanupListeners) {
+                    window.__moonlitCleanupListeners();
+                    window.__moonlitCleanupListeners = null;
+                }
+                if (window.__prescriptCleanupListeners) {
+                    window.__prescriptCleanupListeners();
+                    window.__prescriptCleanupListeners = null;
+                }
                 if (window.__eldritchHoverEyeAnimFrame) {
                     cancelAnimationFrame(window.__eldritchHoverEyeAnimFrame);
                     window.__eldritchHoverEyeAnimFrame = null;
@@ -109,7 +117,12 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                     'moonlit-particles-canvas'
                 ].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.remove();
+                    if (el) {
+                        if (el.dataset && el.dataset.oldBlobUrl) {
+                            try { URL.revokeObjectURL(el.dataset.oldBlobUrl); } catch (e) {}
+                        }
+                        el.remove();
+                    }
                 });
                 document.querySelectorAll('.eldritch-stop-eye-svg, .prescript-stop-seal-svg').forEach(el => el.remove());
 
@@ -645,6 +658,8 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         height: 100vh !important;
                         z-index: 9998 !important;
                         pointer-events: none !important;
+                        contain: strict !important;
+                        will-change: contents !important;
                     }
 
                     #capri-companion-root {
@@ -654,6 +669,7 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
                         z-index: 9999 !important;
                         pointer-events: none !important;
                         user-select: none !important;
+                        contain: layout style !important;
                         will-change: transform !important;
                     }
 
@@ -1947,6 +1963,10 @@ function injectIntoPage(wsUrl, spriteBase64, popoutVideoBase64) {
 
                 // 9. Main 60fps Animation Loop (13-Pose Sprite Cycling + Walking + Activities + Lightning)
                 function tick() {
+                    if (document.hidden) {
+                        window.__capriAnimFrame = requestAnimationFrame(tick);
+                        return;
+                    }
                     state.frameTick++;
 
                     if (!state.moveEnabled && state.mode === 'walk') {

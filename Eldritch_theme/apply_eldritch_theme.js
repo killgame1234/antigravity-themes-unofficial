@@ -86,6 +86,14 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
                 }
+                if (window.__moonlitCleanupListeners) {
+                    window.__moonlitCleanupListeners();
+                    window.__moonlitCleanupListeners = null;
+                }
+                if (window.__prescriptCleanupListeners) {
+                    window.__prescriptCleanupListeners();
+                    window.__prescriptCleanupListeners = null;
+                }
                 if (window.__capriTopPopoutTimer) {
                     clearTimeout(window.__capriTopPopoutTimer);
                     window.__capriTopPopoutTimer = null;
@@ -119,7 +127,12 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     'moonlit-particles-canvas'
                 ].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.remove();
+                    if (el) {
+                        if (el.dataset && el.dataset.oldBlobUrl) {
+                            try { URL.revokeObjectURL(el.dataset.oldBlobUrl); } catch (e) {}
+                        }
+                        el.remove();
+                    }
                 });
                 document.querySelectorAll('.prescript-stop-seal-svg').forEach(el => el.remove());
 
@@ -1316,6 +1329,10 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                 };
 
                 function renderHoverEyes() {
+                    if (document.hidden) {
+                        window.__eldritchHoverEyeAnimFrame = requestAnimationFrame(renderHoverEyes);
+                        return;
+                    }
                     renderAmbientEyeRifts();
                     hCtx.clearRect(0, 0, hoverEyeCanvas.width, hoverEyeCanvas.height);
 
@@ -1435,9 +1452,15 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                 if (window.__eldritchObserver) {
                     window.__eldritchObserver.disconnect();
                 }
+                let eldritchObserverPending = false;
                 window.__eldritchObserver = new MutationObserver(() => {
-                    ensureRiftInsignia();
-                    ensureStopEyeButtons();
+                    if (eldritchObserverPending) return;
+                    eldritchObserverPending = true;
+                    requestAnimationFrame(() => {
+                        eldritchObserverPending = false;
+                        ensureRiftInsignia();
+                        ensureStopEyeButtons();
+                    });
                 });
                 window.__eldritchObserver.observe(document.body, { childList: true, subtree: true });
 

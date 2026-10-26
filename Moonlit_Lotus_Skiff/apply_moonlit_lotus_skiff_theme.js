@@ -61,6 +61,14 @@ function injectIntoPage(wsUrl, videoBase64) {
                     cancelAnimationFrame(window.__prescriptAnimFrame);
                     window.__prescriptAnimFrame = null;
                 }
+                if (window.__prescriptQuoteInterval) {
+                    clearInterval(window.__prescriptQuoteInterval);
+                    window.__prescriptQuoteInterval = null;
+                }
+                if (window.__prescriptTypewriterTimer) {
+                    clearTimeout(window.__prescriptTypewriterTimer);
+                    window.__prescriptTypewriterTimer = null;
+                }
                 if (window.__capriAnimFrame) {
                     cancelAnimationFrame(window.__capriAnimFrame);
                     window.__capriAnimFrame = null;
@@ -73,6 +81,14 @@ function injectIntoPage(wsUrl, videoBase64) {
                     window.__capriCleanupListeners();
                     window.__capriCleanupListeners = null;
                 }
+                if (window.__moonlitCleanupListeners) {
+                    window.__moonlitCleanupListeners();
+                    window.__moonlitCleanupListeners = null;
+                }
+                if (window.__prescriptCleanupListeners) {
+                    window.__prescriptCleanupListeners();
+                    window.__prescriptCleanupListeners = null;
+                }
                 if (window.__eldritchHoverEyeAnimFrame) {
                     cancelAnimationFrame(window.__eldritchHoverEyeAnimFrame);
                     window.__eldritchHoverEyeAnimFrame = null;
@@ -84,6 +100,7 @@ function injectIntoPage(wsUrl, videoBase64) {
 
                 [
                     'eldritch-hover-eye-popup',
+                    'eldritch-ambient-rifts-canvas',
                     'eldritch-bg-video',
                     'eldritch-vignette-overlay',
                     'eldritch-rift-header',
@@ -99,7 +116,12 @@ function injectIntoPage(wsUrl, videoBase64) {
                     'moonlit-particles-canvas'
                 ].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.remove();
+                    if (el) {
+                        if (el.dataset && el.dataset.oldBlobUrl) {
+                            try { URL.revokeObjectURL(el.dataset.oldBlobUrl); } catch (e) {}
+                        }
+                        el.remove();
+                    }
                 });
                 document.querySelectorAll('.eldritch-stop-eye-svg, .prescript-stop-seal-svg').forEach(el => el.remove());
 
@@ -163,15 +185,20 @@ function injectIntoPage(wsUrl, videoBase64) {
                 }
                 resizeCanvas();
                 window.addEventListener('resize', resizeCanvas);
+                window.__moonlitCleanupListeners = () => {
+                    window.removeEventListener('resize', resizeCanvas);
+                };
 
                 // Particle systems: ethereal cyan fireflies and glowing moonlight specks
                 const particles = [];
                 for (let i = 0; i < 45; i++) {
+                    const isCyan = Math.random() > 0.35;
                     particles.push({
                         x: Math.random() * window.innerWidth,
                         y: Math.random() * window.innerHeight,
                         radius: Math.random() * 2.2 + 0.6,
-                        color: Math.random() > 0.35 ? 'rgba(56, 189, 248, ' : 'rgba(251, 191, 36, ',
+                        isCyan: isCyan,
+                        colorPrefix: isCyan ? 'rgba(56, 189, 248, ' : 'rgba(251, 191, 36, ',
                         alpha: Math.random() * 0.7 + 0.2,
                         speedY: -(Math.random() * 0.45 + 0.15),
                         speedX: (Math.random() - 0.5) * 0.35,
@@ -181,8 +208,18 @@ function injectIntoPage(wsUrl, videoBase64) {
                 }
 
                 function drawParticles() {
+                    if (document.hidden) {
+                        window.__moonlitAnimFrame = requestAnimationFrame(drawParticles);
+                        return;
+                    }
+
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Batch 1: Cyan particles
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 8;
                     for (const p of particles) {
+                        if (!p.isCyan) continue;
                         p.y += p.speedY;
                         p.x += p.speedX;
                         p.phase += p.glowPulse;
@@ -197,12 +234,34 @@ function injectIntoPage(wsUrl, videoBase64) {
                         const curAlpha = Math.max(0.05, Math.min(1, p.alpha + Math.sin(p.phase) * 0.35));
                         ctx.beginPath();
                         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                        ctx.fillStyle = p.color + curAlpha + ')';
-                        ctx.shadowColor = p.color === 'rgba(56, 189, 248, ' ? '#38bdf8' : '#fbbf24';
-                        ctx.shadowBlur = 10;
+                        ctx.fillStyle = p.colorPrefix + curAlpha + ')';
                         ctx.fill();
-                        ctx.shadowBlur = 0;
                     }
+
+                    // Batch 2: Amber particles
+                    ctx.shadowColor = '#fbbf24';
+                    ctx.shadowBlur = 8;
+                    for (const p of particles) {
+                        if (p.isCyan) continue;
+                        p.y += p.speedY;
+                        p.x += p.speedX;
+                        p.phase += p.glowPulse;
+
+                        if (p.y < -10) {
+                            p.y = canvas.height + 10;
+                            p.x = Math.random() * canvas.width;
+                        }
+                        if (p.x < -10) p.x = canvas.width + 10;
+                        if (p.x > canvas.width + 10) p.x = -10;
+
+                        const curAlpha = Math.max(0.05, Math.min(1, p.alpha + Math.sin(p.phase) * 0.35));
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.colorPrefix + curAlpha + ')';
+                        ctx.fill();
+                    }
+                    ctx.shadowBlur = 0;
+
                     window.__moonlitAnimFrame = requestAnimationFrame(drawParticles);
                 }
                 window.__moonlitAnimFrame = requestAnimationFrame(drawParticles);
@@ -272,6 +331,8 @@ function injectIntoPage(wsUrl, videoBase64) {
                         height: 100vh !important;
                         z-index: 0 !important;
                         pointer-events: none !important;
+                        contain: strict !important;
+                        will-change: contents !important;
                     }
 
                     #root {
