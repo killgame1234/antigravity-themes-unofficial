@@ -766,7 +766,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     }
 
                     /* ==========================================================================
-                       PRESCRIPT TYPEWRITER HOVER STYLES (ZERO CHURN, MONOSPACE CYAN)
+                       PRESCRIPT TYPEWRITER HOVER STYLES (STRICT SCOPED: YELLOW & BOXED ONLY)
                        ========================================================================== */
                     .prescript-hover-active {
                         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
@@ -806,10 +806,11 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     }
 
                     .prescript-tw-ghost {
-                        visibility: hidden !important;
-                        opacity: 0 !important;
-                        user-select: none !important;
+                        opacity: 0.35 !important;
+                        color: rgba(130, 238, 255, 0.45) !important;
+                        text-shadow: none !important;
                         pointer-events: none !important;
+                        user-select: none !important;
                         white-space: inherit !important;
                     }
 
@@ -820,7 +821,16 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 \`;
 
 
-                // 6. Interactive Prescript In-Place Typewriter Hover Effect
+                // 6. Interactive Prescript Scoped Typewriter Hover Effect
+                // Strictly scoped to:
+                // 1) Yellow/Gold text: strong, b, .text-index-gold
+                // 2) Boxed text: code:not(pre code), .inline-pill, [class*="pill"], [class*="badge"],
+                //    sidebar conversation rows (div[data-testid="conversation-row-sidebar"]),
+                //    and user conversation prompt cards (div[class*="user-input-step"], .bg-card-border:has(.whitespace-pre-wrap))
+                // Excludes plain headings, plain text, and sidebar nav links (+ New Conversation, History)
+                const STRICT_TARGET_SELECTOR = 'strong, b, .text-index-gold, code:not(pre code), .inline-pill, [class*="pill"], [class*="badge"], div[data-testid="conversation-row-sidebar"], div[class*="user-input-step"], .bg-card-border:has(.whitespace-pre-wrap)';
+                const EXCLUDE_SELECTOR = 'a[href="/"], button[data-testid="automations-button"], pre, pre code, #prescript-hand-bg, .prescript-bg-decree-caption, #prescript-fate-canvas, #prescript-vignette-overlay';
+
                 function escapePrescriptHtml(str) {
                     if (!str) return '';
                     return str
@@ -831,34 +841,24 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                         .replace(/'/g, '&#39;');
                 }
 
-                function isEligibleTextLeaf(node) {
-                    if (!node || !(node instanceof HTMLElement)) return false;
-                    const tag = node.tagName.toLowerCase();
-                    if (tag === 'input' || tag === 'textarea' || tag === 'script' || tag === 'style' || node.isContentEditable) return false;
-                    if (node.closest('#prescript-hand-bg') || node.closest('.prescript-bg-decree-caption') || node.closest('#prescript-fate-canvas') || node.closest('#prescript-vignette-overlay')) return false;
-                    if (tag === 'svg' || tag === 'path' || node.closest('svg')) return false;
+                function findTextLeaf(container) {
+                    if (!container) return null;
+                    if (container.children.length === 0) return container;
+                    
+                    const promptText = container.querySelector('.whitespace-pre-wrap');
+                    if (promptText) return promptText;
 
-                    const txt = node.textContent;
-                    if (!txt || !txt.trim()) return false;
-                    if (txt.trim() === '▮') return false;
-                    if (txt.trim().length > 10000) return false;
+                    const rowTitle = container.querySelector('.truncate, span');
+                    if (rowTitle) return rowTitle;
 
-                    if (node.children.length === 0) return true;
-                    return false;
+                    const leaf = container.querySelector('code, strong, b, span');
+                    if (leaf && leaf.children.length === 0) return leaf;
+
+                    return container;
                 }
 
-                function getLeafTextElement(target) {
-                    if (!target) return null;
-                    if (isEligibleTextLeaf(target)) return target;
-
-                    const candidates = target.querySelectorAll('span, p, a, button, h1, h2, h3, h4, h5, h6, li, code, div, strong, b, .truncate');
-                    for (const c of candidates) {
-                        if (isEligibleTextLeaf(c)) return c;
-                    }
-                    return null;
-                }
-
-                let activeTypewriterTarget = null;
+                let activeTargetContainer = null;
+                let activeTextLeaf = null;
 
                 function startTypewriter(el) {
                     if (!el || el.__prescriptTyping) return;
@@ -869,8 +869,8 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     el.__prescriptTyping = true;
                     el.classList.add('prescript-hover-active');
 
-                    // Dynamic duration: snappy 100ms for short badges, up to 320ms for long text
-                    const totalDuration = Math.min(320, Math.max(100, rawText.length * 2.2));
+                    // Dynamic duration: snappy ~120ms for short badges, up to ~350ms for long prompts
+                    const totalDuration = Math.min(350, Math.max(120, rawText.length * 2.2));
                     const startTime = performance.now();
 
                     function renderFrame(now) {
@@ -892,10 +892,12 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                             el.__prescriptTimer = requestAnimationFrame(renderFrame);
                         } else {
                             el.__prescriptTimer = null;
+                            el.__prescriptCompleted = true;
                         }
                     }
 
-                    // Step 0: start with cursor at index 0, full ghost maintaining 100% layout width
+                    // Initial Frame: text is NOT blanked out! Unrevealed text is visible in dim cyber-cyan (opacity: 0.35)
+                    // with cursor ▮ ready at index 0, guaranteeing zero layout shift and smooth transition
                     el.innerHTML = '<span class="prescript-tw-wrapper"><span class="prescript-tw-cursor">▮</span><span class="prescript-tw-ghost">' + escapePrescriptHtml(rawText) + '</span></span>';
                     el.__prescriptTimer = requestAnimationFrame(renderFrame);
                 }
@@ -907,6 +909,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                         el.__prescriptTimer = null;
                     }
                     el.__prescriptTyping = false;
+                    el.__prescriptCompleted = false;
                     if (el.__prescriptOriginalText !== undefined) {
                         el.textContent = el.__prescriptOriginalText;
                         delete el.__prescriptOriginalText;
@@ -915,36 +918,46 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }
 
                 const onPrescriptMouseOver = (e) => {
-                    // Ignore internal mousemove inside active typewriter element
-                    if (activeTypewriterTarget && (activeTypewriterTarget === e.target || activeTypewriterTarget.contains(e.target))) {
+                    // 1. If pointer is moving inside the already active container, DO NOTHING!
+                    // This prevents horizontal/vertical drag from restarting the animation.
+                    if (activeTargetContainer && (activeTargetContainer === e.target || activeTargetContainer.contains(e.target))) {
                         return;
                     }
 
-                    const candidate = e.target.closest('button, a, [role="button"], [role="menuitem"], div[data-testid="conversation-row-sidebar"], h1, h2, h3, h4, h5, h6, .inline-pill, p, li, strong, b, code, .truncate, div.whitespace-pre-wrap');
-                    const leaf = getLeafTextElement(candidate || e.target);
+                    // 2. Strict targeting: only yellow text and boxed elements
+                    const container = e.target.closest(STRICT_TARGET_SELECTOR);
+                    if (!container || container.closest(EXCLUDE_SELECTOR)) {
+                        if (activeTargetContainer) {
+                            resetTypewriter(activeTextLeaf);
+                            activeTargetContainer = null;
+                            activeTextLeaf = null;
+                        }
+                        return;
+                    }
+
+                    if (activeTargetContainer && activeTargetContainer !== container) {
+                        resetTypewriter(activeTextLeaf);
+                    }
+
+                    const leaf = findTextLeaf(container);
                     if (!leaf) return;
 
-                    if (activeTypewriterTarget && activeTypewriterTarget === leaf) {
-                        return;
-                    }
-
-                    if (activeTypewriterTarget && activeTypewriterTarget !== leaf) {
-                        resetTypewriter(activeTypewriterTarget);
-                    }
-                    activeTypewriterTarget = leaf;
+                    activeTargetContainer = container;
+                    activeTextLeaf = leaf;
                     startTypewriter(leaf);
                 };
 
                 const onPrescriptMouseOut = (e) => {
-                    if (!activeTypewriterTarget) return;
+                    if (!activeTargetContainer) return;
 
-                    // Only reset if mouse truly leaves the active element (not moving between internal text spans)
-                    if (e.relatedTarget && (activeTypewriterTarget === e.relatedTarget || activeTypewriterTarget.contains(e.relatedTarget))) {
+                    // Only reset if mouse truly leaves the outer container (not moving across child elements or padding)
+                    if (e.relatedTarget && (activeTargetContainer === e.relatedTarget || activeTargetContainer.contains(e.relatedTarget))) {
                         return;
                     }
 
-                    resetTypewriter(activeTypewriterTarget);
-                    activeTypewriterTarget = null;
+                    resetTypewriter(activeTextLeaf);
+                    activeTargetContainer = null;
+                    activeTextLeaf = null;
                 };
 
                 document.addEventListener('mouseover', onPrescriptMouseOver, true);
