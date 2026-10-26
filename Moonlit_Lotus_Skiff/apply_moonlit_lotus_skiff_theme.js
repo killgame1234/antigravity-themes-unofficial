@@ -211,6 +211,7 @@ const MOONLIT_CSS = `
         letter-spacing: 0.06em !important;
         margin-top: 7px !important;
         text-align: center !important;
+        white-space: nowrap !important;
     }
 
     /* Moonlit Top App Icon Button */
@@ -716,22 +717,6 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
 
                     const uniqueId = Math.round(phase * 1000) + '_' + size;
                     const gradId = 'bmLit_' + uniqueId;
-                    const clipId = 'bmClip_' + uniqueId;
-
-                    let craterDefs = '';
-                    let craterBody = '';
-                    if (size >= 64 && litPath) {
-                        const s = r / 100;
-                        craterDefs = '<clipPath id=\"' + clipId + '\"><path d=\"' + litPath + '\" /></clipPath>';
-                        craterBody = '<g clip-path=\"url(#' + clipId + ')\">' +
-                            '<circle cx=\"' + (cx - 20 * s) + '\" cy=\"' + (cy - 18 * s) + '\" r=\"' + (24 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
-                            '<circle cx=\"' + (cx + 22 * s) + '\" cy=\"' + (cy - 10 * s) + '\" r=\"' + (20 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
-                            '<circle cx=\"' + (cx - 8 * s) + '\" cy=\"' + (cy + 26 * s) + '\" r=\"' + (28 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
-                            '<circle cx=\"' + (cx + 30 * s) + '\" cy=\"' + (cy + 22 * s) + '\" r=\"' + (16 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
-                            '<circle cx=\"' + (cx + (isWaxing ? 28 : -28) * s) + '\" cy=\"' + (cy + 35 * s) + '\" r=\"' + (5 * s) + '\" fill=\"rgba(255, 255, 255, 0.65)\" />' +
-                            '<circle cx=\"' + (cx + (isWaxing ? 12 : -12) * s) + '\" cy=\"' + (cy - 35 * s) + '\" r=\"' + (4 * s) + '\" fill=\"rgba(255, 255, 255, 0.65)\" />' +
-                            '</g>';
-                    }
 
                     return '<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ' + size + ' ' + size + '\" width=\"' + size + '\" height=\"' + size + '\">' +
                         '<defs>' +
@@ -741,12 +726,10 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                                 '<stop offset=\"65%\" stop-color=\"#38bdf8\" />' +
                                 '<stop offset=\"100%\" stop-color=\"#0284c7\" />' +
                             '</linearGradient>' +
-                            craterDefs +
                         '</defs>' +
                         '<circle cx=\"' + cx + '\" cy=\"' + cy + '\" r=\"' + (r * 1.25) + '\" fill=\"rgba(56, 189, 248, 0.25)\" />' +
                         '<circle cx=\"' + cx + '\" cy=\"' + cy + '\" r=\"' + r + '\" fill=\"#08101e\" stroke=\"#38bdf8\" stroke-width=\"1.2\" stroke-opacity=\"0.4\" />' +
                         (litPath ? '<path d=\"' + litPath + '\" fill=\"url(#' + gradId + ')\" />' : '') +
-                        craterBody +
                         '<circle cx=\"' + cx + '\" cy=\"' + cy + '\" r=\"' + r + '\" fill=\"none\" stroke=\"#7dd3fc\" stroke-width=\"1.2\" stroke-opacity=\"0.6\" />' +
                     '</svg>';
                 }
@@ -765,6 +748,9 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     emblem.id = 'moonlit-lotus-emblem';
                     emblem.innerHTML = '<img class=\"moonlit-lotus-img\" src=\"' + currentLargeMoonUrl + '\" alt=\"Real-Life Blue Moon\" />';
                     document.body.prepend(emblem);
+                } else {
+                    const existingImg = emblem.querySelector('.moonlit-lotus-img');
+                    if (existingImg) existingImg.src = currentLargeMoonUrl;
                 }
 
                 let calendarCard = document.getElementById('moonlit-calendar-card');
@@ -821,7 +807,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     }
 
                     if (calendarCard) {
-                        const phaseKey = cal.currentPhaseName + '_' + cal.illumination + '_' + cal.activeQuarterIdx;
+                        const phaseKey = cal.currentPhaseName + '_' + cal.illumination + '_' + cal.activeQuarterIdx + '_v2';
                         if (calendarCard.dataset.phaseKey !== phaseKey || !calendarCard.children.length) {
                             calendarCard.dataset.phaseKey = phaseKey;
                             calendarCard.innerHTML =
@@ -1138,14 +1124,17 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                         curEmblem.style.opacity = '0.98';
 
                         // Time & Date Lunar Phase Calendar HUD docked directly below composer
+                        const cardTop = compRect.bottom + 14;
                         curCard.style.left = centerX + 'px';
-                        curCard.style.top = (compRect.bottom + 14) + 'px';
+                        curCard.style.top = cardTop + 'px';
                         curCard.style.transform = 'translateX(-50%)';
                         curCard.style.opacity = '0.96';
 
-                        // Poetic Decree Caption below the calendar card
+                        // Poetic Decree Caption docked cleanly beneath the calendar card with zero overlap
+                        const cardHeight = curCard.offsetHeight || 92;
+                        const poemTop = cardTop + cardHeight + 14;
                         curPoem.style.left = centerX + 'px';
-                        curPoem.style.top = (compRect.bottom + 104) + 'px';
+                        curPoem.style.top = poemTop + 'px';
                         curPoem.style.transform = 'translateX(-50%)';
                         curPoem.style.maxWidth = Math.min(compRect.width, 680) + 'px';
                         curPoem.style.opacity = '0.92';
