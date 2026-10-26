@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const IMAGE_PATH = path.join(__dirname, 'prescript_source.webp');
+const TYPEWRITER_PATH = path.join(__dirname, 'typewriter.core.js');
 
 async function main() {
     if (!fs.existsSync(IMAGE_PATH)) {
@@ -12,6 +13,12 @@ async function main() {
     const imgBuffer = fs.readFileSync(IMAGE_PATH);
     const imgBase64 = imgBuffer.toString('base64');
     console.log('Loaded Prescript source image bytes:', imgBuffer.length);
+
+    let twBase64 = '';
+    if (fs.existsSync(TYPEWRITER_PATH)) {
+        twBase64 = fs.readFileSync(TYPEWRITER_PATH).toString('base64');
+        console.log('Loaded typewriter.core.js bytes:', twBase64.length);
+    }
 
     // Find active DevTools port
     const appData = process.env.APPDATA || 'C:\\Users\\ngole\\AppData\\Roaming';
@@ -32,11 +39,11 @@ async function main() {
     }
 
     for (const page of pages) {
-        await injectIntoPage(page.webSocketDebuggerUrl, imgBase64);
+        await injectIntoPage(page.webSocketDebuggerUrl, imgBase64, twBase64);
     }
 }
 
-function injectIntoPage(wsUrl, imgBase64) {
+function injectIntoPage(wsUrl, imgBase64, twBase64) {
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(wsUrl);
 
@@ -50,6 +57,16 @@ function injectIntoPage(wsUrl, imgBase64) {
                 if (window.__prescriptObserver) {
                     window.__prescriptObserver.disconnect();
                     window.__prescriptObserver = null;
+                }
+
+                // Register official typewriter-effect core (https://www.npmjs.com/package/typewriter-effect)
+                if (!window.Typewriter && "${twBase64}") {
+                    try {
+                        const twFn = new Function(atob("${twBase64}"));
+                        twFn.call(window);
+                    } catch (e) {
+                        console.error('Failed to initialize Typewriter core:', e);
+                    }
                 }
                 if (window.__prescriptAnimFrame) {
                     cancelAnimationFrame(window.__prescriptAnimFrame);
@@ -749,7 +766,7 @@ function injectIntoPage(wsUrl, imgBase64) {
                     }
 
                     /* ==========================================================================
-                       PRESCRIPT MONOSPACE TYPEWRITER HOVER STYLES
+                       OFFICIAL TYPEWRITER-EFFECT + PRESCRIPT MONOSPACE HOVER STYLES
                        ========================================================================== */
                     .prescript-hover-active {
                         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
@@ -758,55 +775,64 @@ function injectIntoPage(wsUrl, imgBase64) {
                         letter-spacing: 0.04em !important;
                     }
 
-                    .prescript-wrapper {
+                    .prescript-tw-container {
                         display: inline-block !important;
+                        position: relative !important;
                         text-align: left !important;
                         vertical-align: baseline !important;
                         white-space: inherit !important;
                         max-width: 100% !important;
                     }
 
-                    .prescript-typed {
-                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-                        color: rgba(130, 238, 255, 0.98) !important;
-                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75) !important;
-                        white-space: inherit !important;
-                    }
-
-                    .prescript-cursor {
-                        display: inline-block !important;
-                        width: 0 !important;
-                        overflow: visible !important;
-                        color: #00F0FF !important;
-                        text-shadow: 0 0 12px rgba(0, 240, 255, 0.95), 0 0 24px rgba(0, 229, 255, 0.8) !important;
-                        user-select: none !important;
-                        pointer-events: none !important;
-                        vertical-align: baseline !important;
-                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-                    }
-
-                    .prescript-ghost {
+                    .prescript-tw-ghost {
                         visibility: hidden !important;
                         opacity: 0 !important;
                         user-select: none !important;
                         pointer-events: none !important;
                         white-space: inherit !important;
                     }
+
+                    .prescript-tw-active {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        white-space: inherit !important;
+                        text-align: left !important;
+                        color: rgba(130, 238, 255, 0.98) !important;
+                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75) !important;
+                    }
+
+                    .Typewriter__wrapper {
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                        color: rgba(130, 238, 255, 0.98) !important;
+                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75), 0 0 20px rgba(0, 229, 255, 0.35) !important;
+                        letter-spacing: 0.04em !important;
+                        white-space: inherit !important;
+                    }
+
+                    .Typewriter__cursor {
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                        color: #00F0FF !important;
+                        text-shadow: 0 0 12px rgba(0, 240, 255, 0.95), 0 0 24px rgba(0, 229, 255, 0.8) !important;
+                        display: inline-block !important;
+                        width: 0 !important;
+                        overflow: visible !important;
+                        user-select: none !important;
+                        pointer-events: none !important;
+                        vertical-align: baseline !important;
+                        animation: prescript-cursor-blink 0.75s infinite !important;
+                    }
+
+                    @keyframes prescript-cursor-blink {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0; }
+                    }
                 \`;
 
 
-                // 6. Interactive Prescript Typewriter Hover Effect
-                // Automatically types out text on hover using the exact font, color, and ▮ cursor as the background Prescript decree
-                function escapePrescriptHtml(str) {
-                    if (!str) return '';
-                    return str
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#39;');
-                }
-
+                // 6. Interactive Prescript Typewriter Hover Effect powered by typewriter-effect
                 function isEligibleTextLeaf(node) {
                     if (!node || !(node instanceof HTMLElement)) return false;
                     const tag = node.tagName.toLowerCase();
@@ -816,6 +842,7 @@ function injectIntoPage(wsUrl, imgBase64) {
 
                     const txt = node.textContent;
                     if (!txt || !txt.trim()) return false;
+                    if (txt.trim() === '▮') return false;
                     if (txt.trim().length > 10000) return false;
 
                     if (node.children.length === 0) return true;
@@ -837,55 +864,68 @@ function injectIntoPage(wsUrl, imgBase64) {
 
                 function startTypewriter(el) {
                     if (!el || el.__prescriptTyping) return;
-                    const rawText = el.dataset.prescriptOriginalText || el.textContent;
-                    if (!rawText || !rawText.trim()) return;
+                    const rawText = el.__prescriptOriginalText || el.textContent;
+                    if (!rawText || !rawText.trim() || rawText.trim() === '▮') return;
 
-                    el.dataset.prescriptOriginalText = rawText;
+                    el.__prescriptOriginalText = rawText;
                     el.__prescriptTyping = true;
                     el.classList.add('prescript-hover-active');
 
-                    // Dynamic duration: snappy for short words, smooth and non-blocking for long text
-                    const totalDuration = Math.min(500, Math.max(160, rawText.length * 3));
+                    // Build the ghost layout container
+                    const container = document.createElement('span');
+                    container.className = 'prescript-tw-container';
+
+                    const ghost = document.createElement('span');
+                    ghost.className = 'prescript-tw-ghost';
+                    ghost.textContent = rawText;
+
+                    const active = document.createElement('span');
+                    active.className = 'prescript-tw-active';
+
+                    container.appendChild(ghost);
+                    container.appendChild(active);
+
+                    el.textContent = '';
+                    el.appendChild(container);
+
+                    // Dynamic duration & chunk calculation for typewriter-effect
+                    const totalDuration = Math.min(450, Math.max(140, rawText.length * 2.5));
                     const interval = 16;
                     const totalFrames = Math.max(1, Math.round(totalDuration / interval));
-                    const stepSize = Math.max(1, Math.ceil(rawText.length / totalFrames));
+                    const chunkSize = Math.max(1, Math.ceil(rawText.length / totalFrames));
 
-                    let i = 0;
-
-                    function renderStep() {
-                        if (!el.isConnected || !el.__prescriptTyping) {
-                            resetTypewriter(el);
-                            return;
-                        }
-
-                        i += stepSize;
-                        if (i < rawText.length) {
-                            const typed = rawText.slice(0, i);
-                            const untyped = rawText.slice(i);
-                            el.innerHTML = '<span class="prescript-wrapper"><span class="prescript-typed">' + escapePrescriptHtml(typed) + '</span><span class="prescript-cursor">▮</span><span class="prescript-ghost">' + escapePrescriptHtml(untyped) + '</span></span>';
-                            el.__prescriptTimer = setTimeout(renderStep, interval);
-                        } else {
-                            el.innerHTML = '<span class="prescript-wrapper"><span class="prescript-typed">' + escapePrescriptHtml(rawText) + '</span></span>';
-                            el.__prescriptTimer = null;
-                        }
+                    if (window.Typewriter) {
+                        const tw = new window.Typewriter(active, {
+                            cursor: '▮',
+                            delay: interval,
+                            loop: false,
+                            autoStart: false,
+                            stringSplitter: (str) => {
+                                if (chunkSize <= 1) return str.split('');
+                                const chunks = [];
+                                for (let i = 0; i < str.length; i += chunkSize) {
+                                    chunks.push(str.slice(i, i + chunkSize));
+                                }
+                                return chunks;
+                            }
+                        });
+                        el.__prescriptTw = tw;
+                        tw.typeString(rawText).start();
+                    } else {
+                        active.textContent = rawText;
                     }
-
-                    // Initial Frame: Ghost preserves 100% of the element's layout width & alignment.
-                    // The zero-width cursor starts at the left, completely eliminating loading from the right!
-                    el.innerHTML = '<span class="prescript-wrapper"><span class="prescript-cursor">▮</span><span class="prescript-ghost">' + escapePrescriptHtml(rawText) + '</span></span>';
-                    el.__prescriptTimer = setTimeout(renderStep, interval);
                 }
 
                 function resetTypewriter(el) {
                     if (!el) return;
-                    if (el.__prescriptTimer) {
-                        clearTimeout(el.__prescriptTimer);
-                        el.__prescriptTimer = null;
+                    if (el.__prescriptTw) {
+                        try { el.__prescriptTw.stop(); } catch (e) {}
+                        el.__prescriptTw = null;
                     }
                     el.__prescriptTyping = false;
-                    if (el.dataset.prescriptOriginalText !== undefined) {
-                        el.textContent = el.dataset.prescriptOriginalText;
-                        delete el.dataset.prescriptOriginalText;
+                    if (el.__prescriptOriginalText !== undefined) {
+                        el.textContent = el.__prescriptOriginalText;
+                        delete el.__prescriptOriginalText;
                     }
                     el.classList.remove('prescript-hover-active');
                 }
