@@ -309,12 +309,82 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                         border-color: rgba(255, 30, 56, 0.22) !important;
                     }
 
-                    /* Active / Hover Conversation Row in Sidebar */
+                    /* Active / Hover Conversation Row in Sidebar with Shifting Gradient Border & Glow */
+                    div[data-testid="conversation-row-sidebar"].bg-sidebar-secondary,
                     .bg-sidebar-secondary {
-                        background: linear-gradient(90deg, rgba(255, 30, 56, 0.22) 0%, rgba(70, 4, 18, 0.35) 100%) !important;
-                        border: 1px solid rgba(255, 30, 56, 0.5) !important;
-                        box-shadow: 0 0 14px rgba(255, 30, 56, 0.25), inset 0 0 8px rgba(255, 30, 56, 0.15) !important;
-                        color: #FFFFFF !important;
+                        position: relative !important;
+                        background: linear-gradient(135deg, rgba(42, 2, 8, 0.92) 0%, rgba(14, 0, 3, 0.95) 100%) !important;
+                        box-shadow:
+                            0 0 20px rgba(255, 30, 56, 0.5),
+                            inset 0 0 12px rgba(255, 30, 56, 0.25) !important;
+                    }
+
+                    div[data-testid="conversation-row-sidebar"].bg-sidebar-secondary::before,
+                    .bg-sidebar-secondary::before,
+                    div[data-testid="conversation-row-sidebar"]:hover::before {
+                        content: "" !important;
+                        position: absolute !important;
+                        inset: -1.5px !important;
+                        border-radius: inherit !important;
+                        padding: 1.5px !important;
+                        background: linear-gradient(
+                            90deg,
+                            #FF1E38 0%,
+                            #FF7588 16%,
+                            #FFFFFF 30%,
+                            #FF8596 42%,
+                            #FF0026 58%,
+                            #75000F 75%,
+                            #FF1E38 100%
+                        ) !important;
+                        background-size: 300% 100% !important;
+                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+                        -webkit-mask-composite: xor !important;
+                        mask-composite: exclude !important;
+                        pointer-events: none !important;
+                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.75)) !important;
+                    }
+
+                    /* Conversation Title Text inside active / hovered conversation box */
+                    div[data-testid="conversation-row-sidebar"].bg-sidebar-secondary span,
+                    div[data-testid="conversation-row-sidebar"]:hover span {
+                        background: linear-gradient(
+                            90deg,
+                            #FF8596 0%,
+                            #FFFFFF 25%,
+                            #FF1E38 48%,
+                            #FFB3BD 70%,
+                            #FF8596 100%
+                        ) !important;
+                        background-size: 300% 100% !important;
+                        -webkit-background-clip: text !important;
+                        background-clip: text !important;
+                        -webkit-text-fill-color: transparent !important;
+                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        font-weight: 600 !important;
+                        filter: drop-shadow(0 0 6px rgba(255, 30, 56, 0.55)) !important;
+                    }
+
+                    /* Sidebar "Conversations" Header text */
+                    aside .text-xs.font-semibold,
+                    aside [class*="font-semibold"],
+                    aside div:has(> [data-testid="conversation-row-sidebar"]) > div:first-child span,
+                    aside div:has(> [data-testid="conversation-row-sidebar"]) > div:first-child {
+                        background: linear-gradient(
+                            90deg,
+                            #FF3B54 0%,
+                            #FFA8B5 22%,
+                            #FFFFFF 36%,
+                            #FF1E38 55%,
+                            #FF3B54 100%
+                        ) !important;
+                        background-size: 300% 100% !important;
+                        -webkit-background-clip: text !important;
+                        background-clip: text !important;
+                        -webkit-text-fill-color: transparent !important;
+                        animation: eldritch-gradient-flow-ltr 4s linear infinite !important;
+                        letter-spacing: 0.04em !important;
                     }
 
                     /* Sticky User Message Bleed Fix (prevent solid block covering video) */
@@ -326,14 +396,24 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     /* ==========================================================================
-                       DEEP WINE-RED USER MESSAGE BUBBLES + GLOWING CRIMSON HAIRLINE STROKE
+                       DEEP WINE-RED USER MESSAGE BUBBLES WITH SHIFTING GRADIENT BORDER
                        ========================================================================== */
                     [class*="group/user-input-step"] .bg-card-border {
-                        background: #FF1E38 !important;
-                        padding: 1px !important;
+                        background: linear-gradient(
+                            90deg,
+                            #FF1E38 0%,
+                            #FF8092 18%,
+                            #FFFFFF 32%,
+                            #FF334B 48%,
+                            #8A0012 70%,
+                            #FF1E38 100%
+                        ) !important;
+                        background-size: 300% 100% !important;
+                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        padding: 1.5px !important;
                         border-radius: 14px !important;
                         box-shadow:
-                            0 0 18px rgba(255, 30, 56, 0.42),
+                            0 0 22px rgba(255, 30, 56, 0.52),
                             0 4px 24px rgba(0, 0, 0, 0.9) !important;
                         transition: all 0.25s ease !important;
                     }
@@ -379,22 +459,31 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     /* ==========================================================================
-                       ACTIVE INPUT COMPOSER BOX WITH NEON RED BLOOM
+                       ACTIVE INPUT COMPOSER BOX WITH SHIFTING GRADIENT BORDER
                        ========================================================================== */
                     .rounded-2xl.bg-card-border {
-                        background: linear-gradient(90deg, #FF1E38, #8A0618, #FF1E38) !important;
-                        padding: 1px !important;
+                        background: linear-gradient(
+                            90deg,
+                            #FF1E38 0%,
+                            #FF8092 18%,
+                            #FFFFFF 32%,
+                            #FF334B 48%,
+                            #8A0012 70%,
+                            #FF1E38 100%
+                        ) !important;
+                        background-size: 300% 100% !important;
+                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        padding: 1.5px !important;
                         box-shadow:
-                            0 0 20px rgba(255, 30, 56, 0.32),
+                            0 0 24px rgba(255, 30, 56, 0.45),
                             0 8px 32px rgba(0, 0, 0, 0.95) !important;
                         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
                     }
 
                     .rounded-2xl.bg-card-border:focus-within {
-                        background: #FF1E38 !important;
                         box-shadow:
-                            0 0 32px rgba(255, 30, 56, 0.62),
-                            0 0 10px rgba(255, 30, 56, 0.45),
+                            0 0 36px rgba(255, 30, 56, 0.75),
+                            0 0 12px rgba(255, 30, 56, 0.6),
                             0 10px 40px rgba(0, 0, 0, 0.98) !important;
                     }
 
@@ -556,56 +645,62 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     /* ==========================================================================
-                       ELDRITCH HIGH-LEGIBILITY LEFT-TO-RIGHT GRADIENT TEXT EFFECT
+                       ELDRITCH HIGH-CONTRAST VIVID LEFT-TO-RIGHT GRADIENT TEXT EFFECT
                        ========================================================================== */
                     @keyframes eldritch-gradient-flow-ltr {
-                        0% { background-position: 200% 50%; }
+                        0% { background-position: 300% 50%; }
                         100% { background-position: 0% 50%; }
                     }
 
                     h1, h2, h3, h4 {
                         background: linear-gradient(
                             90deg,
-                            #FF6B7D 0%,
-                            #FF1E38 30%,
-                            #FFB3BC 50%,
-                            #FF1E38 70%,
-                            #FF6B7D 100%
+                            #FF1E38 0%,
+                            #FF7588 15%,
+                            #FFFFFF 28%,
+                            #FF99A8 38%,
+                            #FF1E38 52%,
+                            #8A0012 68%,
+                            #FF1E38 85%,
+                            #FF7588 95%,
+                            #FFFFFF 100%
                         ) !important;
-                        background-size: 200% 100% !important;
+                        background-size: 300% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
                         color: #FF2A44 !important;
-                        filter: drop-shadow(0 0 10px rgba(255, 30, 56, 0.42)) !important;
+                        filter: drop-shadow(0 0 12px rgba(255, 30, 56, 0.55)) !important;
                         letter-spacing: 0.02em !important;
-                        animation: eldritch-gradient-flow-ltr 4.5s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 3.4s linear infinite !important;
                     }
 
                     h1:hover, h2:hover, h3:hover, h4:hover {
-                        filter: drop-shadow(0 0 14px rgba(255, 30, 56, 0.8)) !important;
+                        filter: drop-shadow(0 0 16px rgba(255, 30, 56, 0.95)) !important;
                     }
 
                     strong, b {
                         background: linear-gradient(
                             90deg,
-                            #FFA3AF 0%,
-                            #FF3B54 35%,
-                            #FFE3E7 50%,
-                            #FF3B54 65%,
-                            #FFA3AF 100%
+                            #FF475E 0%,
+                            #FFA8B5 18%,
+                            #FFFFFF 30%,
+                            #FFA8B5 44%,
+                            #FF2E47 60%,
+                            #9E0015 76%,
+                            #FF475E 100%
                         ) !important;
-                        background-size: 200% 100% !important;
+                        background-size: 300% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
                         color: #FF475E !important;
-                        filter: drop-shadow(0 0 6px rgba(255, 30, 56, 0.32)) !important;
-                        animation: eldritch-gradient-flow-ltr 5.5s linear infinite !important;
+                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.42)) !important;
+                        animation: eldritch-gradient-flow-ltr 4s linear infinite !important;
                     }
 
                     strong:hover, b:hover {
-                        filter: drop-shadow(0 0 10px rgba(255, 30, 56, 0.75)) !important;
+                        filter: drop-shadow(0 0 12px rgba(255, 30, 56, 0.85)) !important;
                     }
 
                     a,
