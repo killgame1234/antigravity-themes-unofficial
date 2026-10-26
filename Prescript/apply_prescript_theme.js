@@ -45,7 +45,7 @@ const PRESCRIPT_CSS = `
     @keyframes prescript-hand-float {
         0%, 100% {
             transform: translateY(0px);
-            opacity: 0.85;
+            opacity: 0.88;
         }
         50% {
             transform: translateY(-6px);
@@ -53,8 +53,14 @@ const PRESCRIPT_CSS = `
         }
     }
 
-    /* Base Emblem Container */
+    /* ==========================================================================
+       LOGO PLACEMENT: STRICTLY ON TOP OF (ABOVE) "ASK ANYTHING" BOX
+       ========================================================================== */
     #prescript-hand-bg {
+        position: fixed !important;
+        left: 54% !important;
+        top: calc(50% - 90px) !important;
+        transform: translate(-50%, -100%) !important;
         z-index: 0 !important;
         pointer-events: none !important;
         display: flex !important;
@@ -64,10 +70,13 @@ const PRESCRIPT_CSS = `
         background: transparent !important;
         box-shadow: none !important;
         border: none !important;
-        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
     .prescript-hand-img {
+        max-height: min(250px, 30vh) !important;
+        max-width: min(300px, 35vw) !important;
+        width: auto !important;
+        height: auto !important;
         background: transparent !important;
         box-shadow: none !important;
         border: none !important;
@@ -75,89 +84,28 @@ const PRESCRIPT_CSS = `
         animation: prescript-hand-float 6s infinite ease-in-out !important;
         user-select: none !important;
         pointer-events: none !important;
-        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
-    /* Base Prescript Decree Caption */
+    /* ==========================================================================
+       QUOTE PLACEMENT: STRICTLY UNDER "ASK ANYTHING" BOX
+       ========================================================================== */
     #prescript-quote-box {
-        z-index: 2 !important;
-        pointer-events: none !important;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-        color: rgba(130, 238, 255, 0.85) !important;
-        text-shadow: 0 0 10px rgba(0, 229, 255, 0.6) !important;
-        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }
-
-    /* ==========================================================================
-       DYNAMIC MODE 1: ACTIVE CONVERSATION (IN CHAT WITH MESSAGES)
-       Center background is completely clean. Emblem & quote float in empty right gutter!
-       ========================================================================== */
-    body.prescript-in-conversation #prescript-hand-bg {
-        position: fixed !important;
-        right: 20px !important;
-        left: auto !important;
-        top: 42% !important;
-        transform: translateY(-50%) !important;
-        width: 140px !important;
-        opacity: 0.88 !important;
-    }
-
-    body.prescript-in-conversation .prescript-hand-img {
-        max-width: 120px !important;
-        max-height: 140px !important;
-        width: auto !important;
-    }
-
-    body.prescript-in-conversation #prescript-quote-box {
-        position: fixed !important;
-        right: 12px !important;
-        left: auto !important;
-        top: calc(42% + 80px) !important;
-        bottom: auto !important;
-        transform: none !important;
-        max-width: 155px !important;
-        font-size: 11px !important;
-        line-height: 1.45 !important;
-        letter-spacing: 0.08em !important;
-        text-align: center !important;
-        opacity: 0.88 !important;
-    }
-
-    /* ==========================================================================
-       DYNAMIC MODE 2: NEW CONVERSATION (EMPTY STATE)
-       Main Background: Logo strictly ABOVE "Ask anything" box, Quote strictly UNDER it!
-       ========================================================================== */
-    body:not(.prescript-in-conversation) #prescript-hand-bg,
-    body.prescript-new-conversation #prescript-hand-bg {
         position: fixed !important;
         left: 54% !important;
-        right: auto !important;
-        top: calc(50% - 95px) !important;
-        transform: translate(-50%, -100%) !important;
-        opacity: 0.92 !important;
-    }
-
-    body:not(.prescript-in-conversation) .prescript-hand-img,
-    body.prescript-new-conversation .prescript-hand-img {
-        max-height: min(240px, 30vh) !important;
-        max-width: min(280px, 35vw) !important;
-        width: auto !important;
-    }
-
-    body:not(.prescript-in-conversation) #prescript-quote-box,
-    body.prescript-new-conversation #prescript-quote-box {
-        position: fixed !important;
-        left: 54% !important;
-        right: auto !important;
         top: calc(50% + 75px) !important;
         bottom: auto !important;
         transform: translateX(-50%) !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
         max-width: min(650px, 80vw) !important;
+        text-align: center !important;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
         font-size: 12px !important;
         line-height: 1.55 !important;
         letter-spacing: 0.14em !important;
-        text-align: center !important;
-        opacity: 0.92 !important;
+        color: rgba(130, 238, 255, 0.85) !important;
+        text-shadow: 0 0 10px rgba(0, 229, 255, 0.6) !important;
+        transition: opacity 0.3s ease !important;
     }
 
     #prescript-vignette-overlay {
@@ -554,8 +502,9 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 try { if (window.__prescriptCleanupListeners) { window.__prescriptCleanupListeners(); window.__prescriptCleanupListeners = null; } } catch(e){}
                 window.__prescriptCleanupListeners = null;
 
-                // Clean legacy alien theme nodes
+                // Clean legacy alien theme nodes & temporary styles
                 [
+                    'prescript-dynamic-modes', 'prescript-test-style',
                     'halibut-eye-demo-panel', 'eldritch-hover-eye-popup', 'eldritch-ambient-rifts-canvas',
                     'eldritch-bg-video', 'eldritch-vignette-overlay', 'eldritch-rift-header',
                     'capri-companion-root', 'capri-lightning-canvas', 'capri-top-popout',
@@ -565,7 +514,9 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     if (el) el.remove();
                 });
 
-                // Single global state object for memory safety and watchdog monitoring
+                document.body.classList.remove('prescript-in-conversation', 'prescript-new-conversation');
+
+                // Single global state object
                 const state = {
                     animFrame: null,
                     watchdog: null,
@@ -575,8 +526,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     cleanupListeners: null,
                     activeTargetContainer: null,
                     activeHoverLeaf: null,
-                    lastFrameTime: performance.now(),
-                    lastModeCheck: 0
+                    lastFrameTime: performance.now()
                 };
                 window.__prescriptState = state;
 
@@ -590,7 +540,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }
 
                 // =========================================================================
-                // 1. DOM NODES CREATION / REUSE (PERSISTENT & RESILIENT)
+                // 1. DOM NODES CREATION (SEPARATE TOP-LEVEL ELEMENTS)
                 // =========================================================================
                 const handDataUrl = "data:image/webp;base64," + ${JSON.stringify(imgBase64)};
 
@@ -602,7 +552,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     document.body.prepend(fateCanvas);
                 }
 
-                // (b) Transparent Index Hand Emblem (Clean logo, no text inside)
+                // (b) Transparent Index Hand Emblem (Clean logo, zero text inside)
                 let handBg = document.getElementById('prescript-hand-bg');
                 if (!handBg) {
                     handBg = document.createElement('div');
@@ -610,18 +560,26 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     handBg.innerHTML = '<img class="prescript-hand-img" src="' + handDataUrl + '" alt="The Index Hand Emblem" />';
                     document.body.prepend(handBg);
                 } else {
+                    // Ensure quote box is NEVER a child of handBg
+                    const childQuote = handBg.querySelector('#prescript-quote-box');
+                    if (childQuote) childQuote.remove();
                     const img = handBg.querySelector('.prescript-hand-img');
                     if (img && img.src !== handDataUrl) img.src = handDataUrl;
                 }
+                handBg.style.cssText = '';
 
-                // (c) Distinct Dedicated Prescript Quote Box
+                // (c) Dedicated Prescript Quote Box directly on document.body
                 let quoteBox = document.getElementById('prescript-quote-box');
                 if (!quoteBox) {
                     quoteBox = document.createElement('div');
                     quoteBox.id = 'prescript-quote-box';
                     quoteBox.className = 'prescript-bg-decree-caption';
                     document.body.appendChild(quoteBox);
+                } else if (quoteBox.parentElement !== document.body) {
+                    quoteBox.remove();
+                    document.body.appendChild(quoteBox);
                 }
+                quoteBox.style.cssText = '';
 
                 // (d) Obsidian-Black OLED Vignette Overlay
                 let vignette = document.getElementById('prescript-vignette-overlay');
@@ -631,7 +589,6 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     document.body.prepend(vignette);
                 }
 
-                // Helper to ensure DOM layer integrity
                 function ensureDOMElements() {
                     if (!document.getElementById('prescript-fate-canvas')) {
                         document.body.prepend(fateCanvas);
@@ -648,36 +605,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }
 
                 // =========================================================================
-                // 2. DYNAMIC MODE CONTROLLER (NEW CHAT vs ACTIVE CONVERSATION)
-                // =========================================================================
-                // In Active Conversation: Emblem and quote move to the empty right side gutter
-                // In New Conversation: Logo strictly ABOVE "Ask anything" box, Quote strictly UNDER it
-                function updateConversationMode(now) {
-                    if (now && now - state.lastModeCheck < 200) return;
-                    state.lastModeCheck = now || performance.now();
-
-                    const messages = document.querySelectorAll('[class*="group/user-input-step"], [class*="user-input-step"]');
-                    const composer = document.getElementById('antigravity.agentSidePanelInputBox') || document.querySelector('.rounded-2xl.bg-card-border');
-                    const compRect = composer ? composer.getBoundingClientRect() : null;
-
-                    const isInChat = messages.length > 0 && compRect && compRect.top > (window.innerHeight * 0.65);
-
-                    if (isInChat) {
-                        if (!document.body.classList.contains('prescript-in-conversation')) {
-                            document.body.classList.remove('prescript-new-conversation');
-                            document.body.classList.add('prescript-in-conversation');
-                        }
-                    } else {
-                        if (!document.body.classList.contains('prescript-new-conversation')) {
-                            document.body.classList.remove('prescript-in-conversation');
-                            document.body.classList.add('prescript-new-conversation');
-                        }
-                    }
-                }
-                updateConversationMode();
-
-                // =========================================================================
-                // 3. DYNAMIC PRESCRIPT QUOTE GENERATOR & SMOOTH TYPEWRITER LOOP (16s)
+                // 2. DYNAMIC PRESCRIPT QUOTE GENERATOR & SMOOTH TYPEWRITER LOOP (16s)
                 // =========================================================================
                 const canonicalPrescripts = [
                     "To the one who receives this: Drink a cup of lukewarm water at 3:14, then look toward the northernmost tower.",
@@ -768,7 +696,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }, 16000);
 
                 // =========================================================================
-                // 4. CYAN STRINGS OF FATE CANVAS & WATCHDOG LOOP
+                // 3. CYAN STRINGS OF FATE CANVAS & WATCHDOG LOOP
                 // =========================================================================
                 const ctx = fateCanvas.getContext('2d');
                 function resizeCanvas() {
@@ -816,8 +744,6 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
 
                 function renderFateStrings(now) {
                     state.lastFrameTime = now;
-                    updateConversationMode(now);
-
                     if (document.hidden) {
                         state.animFrame = requestAnimationFrame(renderFateStrings);
                         return;
@@ -869,7 +795,6 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 state.watchdog = setInterval(() => {
                     ensureDOMElements();
                     resizeCanvas();
-                    updateConversationMode();
                     const now = performance.now();
                     if (!document.hidden && now - state.lastFrameTime > 2500) {
                         if (state.animFrame) cancelAnimationFrame(state.animFrame);
@@ -878,7 +803,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }, 2000);
 
                 // =========================================================================
-                // 5. INJECT THE INDEX & PRESCRIPT CSS THEME
+                // 4. INJECT THE INDEX & PRESCRIPT CSS THEME
                 // =========================================================================
                 let style = document.getElementById('custom-antigravity-theme');
                 if (!style) {
@@ -889,7 +814,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 style.textContent = ${JSON.stringify(PRESCRIPT_CSS)};
 
                 // =========================================================================
-                // 6. INTERACTIVE PRESCRIPT SCOPED TYPEWRITER HOVER EFFECT
+                // 5. INTERACTIVE PRESCRIPT SCOPED TYPEWRITER HOVER EFFECT
                 // =========================================================================
                 const STRICT_TARGET_SELECTOR = 'strong, b, .text-index-gold, code:not(pre code), .inline-pill, [class*="pill"], [class*="badge"], div[data-testid="conversation-row-sidebar"], div[class*="user-input-step"], .bg-card-border:has(.whitespace-pre-wrap)';
                 const EXCLUDE_SELECTOR = 'a[href="/"], button[data-testid="automations-button"], pre, pre code, #prescript-hand-bg, #prescript-quote-box, #prescript-fate-canvas, #prescript-vignette-overlay';
@@ -1024,15 +949,14 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     window.removeEventListener('resize', resizeCanvas);
                 };
 
-                // Dynamic DOM Observer for instant recovery & view mode transitions
+                // Dynamic DOM Observer for instant recovery
                 const observer = new MutationObserver(() => {
                     ensureDOMElements();
-                    updateConversationMode();
                 });
-                observer.observe(document.body, { childList: true, subtree: true });
+                observer.observe(document.body, { childList: true });
                 state.observer = observer;
 
-                return 'Prescript Theme Live: Side-Gutter Active Layout & New-Conversation Flanked Composer!';
+                return 'Prescript Theme Live: Logo On Top of Ask Anything, Quote Under Ask Anything!';
             })();`;
 
             ws.send(JSON.stringify({
