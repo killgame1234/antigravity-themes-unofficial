@@ -556,63 +556,56 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     /* ==========================================================================
-                       ELDRITCH GRADIENT TEXT EFFECT & SELECTIVE INTERMITTENT BLOOD-BLEEDING TEXT
+                       ELDRITCH HIGH-LEGIBILITY LEFT-TO-RIGHT GRADIENT TEXT EFFECT
                        ========================================================================== */
-                    @keyframes eldritch-gradient-flow {
-                        0%, 100% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
-                    }
-
-                    @keyframes eldritch-blood-ooze {
-                        0%, 100% {
-                            filter:
-                                drop-shadow(0 1px 2px rgba(255, 30, 56, 0.75))
-                                drop-shadow(0 3px 6px rgba(165, 0, 22, 0.55));
-                        }
-                        45% {
-                            filter:
-                                drop-shadow(0 2px 2px rgba(255, 30, 56, 0.95))
-                                drop-shadow(0 5px 7px rgba(200, 0, 28, 0.85))
-                                drop-shadow(0 10px 12px rgba(115, 0, 15, 0.7));
-                        }
-                        75% {
-                            filter:
-                                drop-shadow(0 3px 3px rgba(255, 50, 74, 0.9))
-                                drop-shadow(0 8px 10px rgba(150, 0, 20, 0.8))
-                                drop-shadow(0 14px 16px rgba(80, 0, 10, 0.55));
-                        }
+                    @keyframes eldritch-gradient-flow-ltr {
+                        0% { background-position: 200% 50%; }
+                        100% { background-position: 0% 50%; }
                     }
 
                     h1, h2, h3, h4 {
-                        background: linear-gradient(120deg, #FFD1D8 0%, #FF1E38 32%, #9E0018 64%, #FF5C70 100%) !important;
-                        background-size: 220% auto !important;
+                        background: linear-gradient(
+                            90deg,
+                            #FF6B7D 0%,
+                            #FF1E38 30%,
+                            #FFB3BC 50%,
+                            #FF1E38 70%,
+                            #FF6B7D 100%
+                        ) !important;
+                        background-size: 200% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
                         color: #FF2A44 !important;
                         filter: drop-shadow(0 0 10px rgba(255, 30, 56, 0.42)) !important;
                         letter-spacing: 0.02em !important;
-                        animation: eldritch-gradient-flow 6.5s ease-in-out infinite !important;
+                        animation: eldritch-gradient-flow-ltr 4.5s linear infinite !important;
+                    }
+
+                    h1:hover, h2:hover, h3:hover, h4:hover {
+                        filter: drop-shadow(0 0 14px rgba(255, 30, 56, 0.8)) !important;
                     }
 
                     strong, b {
-                        background: linear-gradient(120deg, #FFB8C3 0%, #FF2A44 42%, #B8001C 78%, #FF7A8A 100%) !important;
-                        background-size: 200% auto !important;
+                        background: linear-gradient(
+                            90deg,
+                            #FFA3AF 0%,
+                            #FF3B54 35%,
+                            #FFE3E7 50%,
+                            #FF3B54 65%,
+                            #FFA3AF 100%
+                        ) !important;
+                        background-size: 200% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
                         color: #FF475E !important;
                         filter: drop-shadow(0 0 6px rgba(255, 30, 56, 0.32)) !important;
-                        animation: eldritch-gradient-flow 8s ease-in-out infinite !important;
+                        animation: eldritch-gradient-flow-ltr 5.5s linear infinite !important;
                     }
 
-                    /* Selective intermittent bleeding state (applied dynamically to only a few text elements at a time, plus on hover) */
-                    .eldritch-text-bleeding,
-                    h1:hover, h2:hover, h3:hover, h4:hover,
                     strong:hover, b:hover {
-                        animation:
-                            eldritch-gradient-flow 4s ease-in-out infinite,
-                            eldritch-blood-ooze 1.8s ease-in-out infinite !important;
+                        filter: drop-shadow(0 0 10px rgba(255, 30, 56, 0.75)) !important;
                     }
 
                     a,
@@ -1029,115 +1022,6 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
                 }
 
-                // 6c. Selective & Intermittent Text Bleeding Effect (only some text elements, not always bleeding — like Capri's selective effect)
-                const activeBloodDrips = [];
-                let bleedCycleTimer = 45;
-                let activeBleedingEls = [];
-
-                function triggerSelectiveTextBleed() {
-                    // Clear previous bleeding elements
-                    activeBleedingEls.forEach(el => el.classList.remove('eldritch-text-bleeding'));
-                    activeBleedingEls = [];
-
-                    const candidates = Array.from(document.querySelectorAll(
-                        'h1, h2, h3, h4, strong, b, code:not(pre code), .bg-sidebar-secondary span'
-                    )).filter(el => {
-                        const r = el.getBoundingClientRect();
-                        return r.width > 18 && r.height > 10 && r.top > 55 && r.bottom < window.innerHeight - 40;
-                    });
-
-                    if (candidates.length === 0) return;
-
-                    // Pick only 1 or 2 random visible text elements at a time
-                    const count = Math.min(candidates.length, 1 + (Math.random() < 0.45 ? 1 : 0));
-                    for (let i = 0; i < count; i++) {
-                        const el = candidates[Math.floor(Math.random() * candidates.length)];
-                        if (!activeBleedingEls.includes(el)) {
-                            el.classList.add('eldritch-text-bleeding');
-                            activeBleedingEls.push(el);
-
-                            const r = el.getBoundingClientRect();
-                            const dripCount = 2 + Math.floor(Math.random() * 3);
-                            for (let d = 0; d < dripCount; d++) {
-                                activeBloodDrips.push({
-                                    el,
-                                    relX: (0.12 + Math.random() * 0.76) * Math.min(r.width, 180),
-                                    delay: d * (8 + Math.floor(Math.random() * 12)),
-                                    dropY: 0,
-                                    speed: 0.28 + Math.random() * 0.34,
-                                    maxDrop: 13 + Math.random() * 14,
-                                    radius: 1.4 + Math.random() * 1.1,
-                                    alpha: 0.92
-                                });
-                            }
-                        }
-                    }
-                }
-
-                function renderSelectiveTextBleedDrips() {
-                    bleedCycleTimer--;
-                    if (bleedCycleTimer <= 0) {
-                        if (activeBleedingEls.length > 0) {
-                            // Pause between bleeding cycles so text is NOT always bleeding
-                            activeBleedingEls.forEach(el => el.classList.remove('eldritch-text-bleeding'));
-                            activeBleedingEls = [];
-                            bleedCycleTimer = 95 + Math.floor(Math.random() * 85);
-                        } else {
-                            triggerSelectiveTextBleed();
-                            bleedCycleTimer = 85 + Math.floor(Math.random() * 45);
-                        }
-                    }
-
-                    for (let i = activeBloodDrips.length - 1; i >= 0; i--) {
-                        const drip = activeBloodDrips[i];
-                        if (!document.body.contains(drip.el)) {
-                            activeBloodDrips.splice(i, 1);
-                            continue;
-                        }
-                        if (drip.delay > 0) {
-                            drip.delay--;
-                            continue;
-                        }
-
-                        drip.dropY += drip.speed;
-                        drip.speed += 0.012;
-                        const progress = drip.dropY / drip.maxDrop;
-                        if (progress >= 1.0) {
-                            activeBloodDrips.splice(i, 1);
-                            continue;
-                        }
-
-                        const r = drip.el.getBoundingClientRect();
-                        const x = r.left + drip.relX;
-                        const startY = r.bottom - 2;
-                        const curY = startY + drip.dropY;
-                        const alpha = (1.0 - progress * progress) * drip.alpha;
-
-                        hCtx.save();
-                        hCtx.globalAlpha = alpha;
-                        // Thin crimson blood trail connecting letter base to droplet
-                        const grad = hCtx.createLinearGradient(x, startY, x, curY);
-                        grad.addColorStop(0, 'rgba(140, 0, 18, 0.15)');
-                        grad.addColorStop(0.65, 'rgba(255, 24, 52, 0.75)');
-                        grad.addColorStop(1, '#FF1E38');
-                        hCtx.strokeStyle = grad;
-                        hCtx.lineWidth = Math.max(0.8, drip.radius * (1.0 - progress * 0.45));
-                        hCtx.beginPath();
-                        hCtx.moveTo(x, startY);
-                        hCtx.lineTo(x, curY);
-                        hCtx.stroke();
-
-                        // Glowing crimson droplet tip
-                        hCtx.fillStyle = '#FF1E38';
-                        hCtx.shadowColor = '#FF1E38';
-                        hCtx.shadowBlur = 5;
-                        hCtx.beginPath();
-                        hCtx.ellipse(x, curY, drip.radius * 0.85, drip.radius * 1.35, 0, 0, Math.PI * 2);
-                        hCtx.fill();
-                        hCtx.restore();
-                    }
-                }
-
                 // Offscreen canvases that isolate the BIG MIDDLE EYE & its animated pupil from #eldritch-bg-video (snaptik.vn_7586300755884182802.mp4)
                 const esW = 96;
                 const esH = 60;
@@ -1334,13 +1218,11 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     document.removeEventListener('mouseover', onMouseOver, true);
                     window.removeEventListener('mousemove', onMouseMove, true);
                     window.removeEventListener('resize', resizeHoverCanvas);
-                    document.querySelectorAll('.eldritch-text-bleeding').forEach(el => el.classList.remove('eldritch-text-bleeding'));
                 };
 
                 function renderHoverEyes() {
                     renderAmbientEyeRifts();
                     hCtx.clearRect(0, 0, hoverEyeCanvas.width, hoverEyeCanvas.height);
-                    renderSelectiveTextBleedDrips();
 
                     if (currentHoverEl && document.body.contains(currentHoverEl)) {
                         hoverSpawnCooldown--;
