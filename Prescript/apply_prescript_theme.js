@@ -766,7 +766,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     }
 
                     /* ==========================================================================
-                       OFFICIAL TYPEWRITER-EFFECT + PRESCRIPT MONOSPACE HOVER STYLES
+                       PRESCRIPT TYPEWRITER HOVER STYLES (ZERO CHURN, MONOSPACE CYAN)
                        ========================================================================== */
                     .prescript-hover-active {
                         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
@@ -775,13 +775,34 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                         letter-spacing: 0.04em !important;
                     }
 
-                    .prescript-tw-container {
+                    .prescript-tw-wrapper {
                         display: inline-block !important;
-                        position: relative !important;
                         text-align: left !important;
                         vertical-align: baseline !important;
                         white-space: inherit !important;
                         max-width: 100% !important;
+                        pointer-events: none !important;
+                    }
+
+                    .prescript-tw-typed {
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                        color: rgba(130, 238, 255, 0.98) !important;
+                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75), 0 0 20px rgba(0, 229, 255, 0.35) !important;
+                        white-space: inherit !important;
+                        pointer-events: none !important;
+                    }
+
+                    .prescript-tw-cursor {
+                        display: inline-block !important;
+                        width: 0 !important;
+                        overflow: visible !important;
+                        color: #00F0FF !important;
+                        text-shadow: 0 0 12px rgba(0, 240, 255, 0.95), 0 0 24px rgba(0, 229, 255, 0.8) !important;
+                        user-select: none !important;
+                        pointer-events: none !important;
+                        vertical-align: baseline !important;
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+                        animation: prescript-cursor-blink 0.75s infinite !important;
                     }
 
                     .prescript-tw-ghost {
@@ -792,39 +813,6 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                         white-space: inherit !important;
                     }
 
-                    .prescript-tw-active {
-                        position: absolute !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        width: 100% !important;
-                        height: 100% !important;
-                        white-space: inherit !important;
-                        text-align: left !important;
-                        color: rgba(130, 238, 255, 0.98) !important;
-                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75) !important;
-                    }
-
-                    .Typewriter__wrapper {
-                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-                        color: rgba(130, 238, 255, 0.98) !important;
-                        text-shadow: 0 0 10px rgba(0, 229, 255, 0.75), 0 0 20px rgba(0, 229, 255, 0.35) !important;
-                        letter-spacing: 0.04em !important;
-                        white-space: inherit !important;
-                    }
-
-                    .Typewriter__cursor {
-                        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-                        color: #00F0FF !important;
-                        text-shadow: 0 0 12px rgba(0, 240, 255, 0.95), 0 0 24px rgba(0, 229, 255, 0.8) !important;
-                        display: inline-block !important;
-                        width: 0 !important;
-                        overflow: visible !important;
-                        user-select: none !important;
-                        pointer-events: none !important;
-                        vertical-align: baseline !important;
-                        animation: prescript-cursor-blink 0.75s infinite !important;
-                    }
-
                     @keyframes prescript-cursor-blink {
                         0%, 100% { opacity: 1; }
                         50% { opacity: 0; }
@@ -832,7 +820,17 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 \`;
 
 
-                // 6. Interactive Prescript Typewriter Hover Effect powered by typewriter-effect
+                // 6. Interactive Prescript In-Place Typewriter Hover Effect
+                function escapePrescriptHtml(str) {
+                    if (!str) return '';
+                    return str
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                }
+
                 function isEligibleTextLeaf(node) {
                     if (!node || !(node instanceof HTMLElement)) return false;
                     const tag = node.tagName.toLowerCase();
@@ -871,56 +869,42 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     el.__prescriptTyping = true;
                     el.classList.add('prescript-hover-active');
 
-                    // Build the ghost layout container
-                    const container = document.createElement('span');
-                    container.className = 'prescript-tw-container';
+                    // Dynamic duration: snappy 100ms for short badges, up to 320ms for long text
+                    const totalDuration = Math.min(320, Math.max(100, rawText.length * 2.2));
+                    const startTime = performance.now();
 
-                    const ghost = document.createElement('span');
-                    ghost.className = 'prescript-tw-ghost';
-                    ghost.textContent = rawText;
+                    function renderFrame(now) {
+                        if (!el.isConnected || !el.__prescriptTyping) {
+                            resetTypewriter(el);
+                            return;
+                        }
 
-                    const active = document.createElement('span');
-                    active.className = 'prescript-tw-active';
+                        const elapsed = now - startTime;
+                        const progress = Math.min(1, elapsed / totalDuration);
+                        const count = Math.max(1, Math.floor(progress * rawText.length));
 
-                    container.appendChild(ghost);
-                    container.appendChild(active);
+                        const typed = rawText.slice(0, count);
+                        const ghost = rawText.slice(count);
 
-                    el.textContent = '';
-                    el.appendChild(container);
+                        el.innerHTML = '<span class="prescript-tw-wrapper"><span class="prescript-tw-typed">' + escapePrescriptHtml(typed) + '</span><span class="prescript-tw-cursor">▮</span><span class="prescript-tw-ghost">' + escapePrescriptHtml(ghost) + '</span></span>';
 
-                    // Dynamic duration & chunk calculation for typewriter-effect
-                    const totalDuration = Math.min(450, Math.max(140, rawText.length * 2.5));
-                    const interval = 16;
-                    const totalFrames = Math.max(1, Math.round(totalDuration / interval));
-                    const chunkSize = Math.max(1, Math.ceil(rawText.length / totalFrames));
-
-                    if (window.Typewriter) {
-                        const tw = new window.Typewriter(active, {
-                            cursor: '▮',
-                            delay: interval,
-                            loop: false,
-                            autoStart: false,
-                            stringSplitter: (str) => {
-                                if (chunkSize <= 1) return str.split('');
-                                const chunks = [];
-                                for (let i = 0; i < str.length; i += chunkSize) {
-                                    chunks.push(str.slice(i, i + chunkSize));
-                                }
-                                return chunks;
-                            }
-                        });
-                        el.__prescriptTw = tw;
-                        tw.typeString(rawText).start();
-                    } else {
-                        active.textContent = rawText;
+                        if (progress < 1) {
+                            el.__prescriptTimer = requestAnimationFrame(renderFrame);
+                        } else {
+                            el.__prescriptTimer = null;
+                        }
                     }
+
+                    // Step 0: start with cursor at index 0, full ghost maintaining 100% layout width
+                    el.innerHTML = '<span class="prescript-tw-wrapper"><span class="prescript-tw-cursor">▮</span><span class="prescript-tw-ghost">' + escapePrescriptHtml(rawText) + '</span></span>';
+                    el.__prescriptTimer = requestAnimationFrame(renderFrame);
                 }
 
                 function resetTypewriter(el) {
                     if (!el) return;
-                    if (el.__prescriptTw) {
-                        try { el.__prescriptTw.stop(); } catch (e) {}
-                        el.__prescriptTw = null;
+                    if (el.__prescriptTimer) {
+                        cancelAnimationFrame(el.__prescriptTimer);
+                        el.__prescriptTimer = null;
                     }
                     el.__prescriptTyping = false;
                     if (el.__prescriptOriginalText !== undefined) {
@@ -931,9 +915,18 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }
 
                 const onPrescriptMouseOver = (e) => {
+                    // Ignore internal mousemove inside active typewriter element
+                    if (activeTypewriterTarget && (activeTypewriterTarget === e.target || activeTypewriterTarget.contains(e.target))) {
+                        return;
+                    }
+
                     const candidate = e.target.closest('button, a, [role="button"], [role="menuitem"], div[data-testid="conversation-row-sidebar"], h1, h2, h3, h4, h5, h6, .inline-pill, p, li, strong, b, code, .truncate, div.whitespace-pre-wrap');
                     const leaf = getLeafTextElement(candidate || e.target);
                     if (!leaf) return;
+
+                    if (activeTypewriterTarget && activeTypewriterTarget === leaf) {
+                        return;
+                    }
 
                     if (activeTypewriterTarget && activeTypewriterTarget !== leaf) {
                         resetTypewriter(activeTypewriterTarget);
@@ -944,10 +937,14 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
 
                 const onPrescriptMouseOut = (e) => {
                     if (!activeTypewriterTarget) return;
-                    if (!e.relatedTarget || (!activeTypewriterTarget.contains(e.relatedTarget) && !e.relatedTarget.contains(activeTypewriterTarget))) {
-                        resetTypewriter(activeTypewriterTarget);
-                        activeTypewriterTarget = null;
+
+                    // Only reset if mouse truly leaves the active element (not moving between internal text spans)
+                    if (e.relatedTarget && (activeTypewriterTarget === e.relatedTarget || activeTypewriterTarget.contains(e.relatedTarget))) {
+                        return;
                     }
+
+                    resetTypewriter(activeTypewriterTarget);
+                    activeTypewriterTarget = null;
                 };
 
                 document.addEventListener('mouseover', onPrescriptMouseOver, true);
