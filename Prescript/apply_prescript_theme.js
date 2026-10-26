@@ -112,20 +112,34 @@ const PRESCRIPT_CSS = `
         transition: opacity 0.3s ease, left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
+    /* Prescript Top App Icon Button */
+    button[data-testid="app-icon-new-conversation-button"] {
+        padding: 0 4px !important;
+        height: 36px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: visible !important;
+    }
+
+    button[data-testid="app-icon-new-conversation-button"] > svg {
+        display: none !important;
+    }
+
     /* Prescript Top App Icon (Replacing Antigravity top logo) */
     .prescript-top-app-icon {
-        width: 22px !important;
-        height: 22px !important;
+        width: 36px !important;
+        height: 36px !important;
         object-fit: contain !important;
-        filter: drop-shadow(0 0 6px #00E5FF) !important;
+        filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.95)) !important;
         vertical-align: middle !important;
         cursor: pointer !important;
-        transition: transform 0.2s ease !important;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease !important;
     }
 
     .prescript-top-app-icon:hover {
-        transform: scale(1.12) rotate(4deg) !important;
-        filter: drop-shadow(0 0 10px #00F0FF) !important;
+        transform: scale(1.1) rotate(3deg) !important;
+        filter: drop-shadow(0 0 14px #00F0FF) !important;
     }
 
     #prescript-vignette-overlay {
