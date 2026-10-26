@@ -330,20 +330,23 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                         background: linear-gradient(
                             90deg,
                             #FF1E38 0%,
-                            #FF7588 16%,
-                            #FFFFFF 30%,
-                            #FF8596 42%,
-                            #FF0026 58%,
-                            #75000F 75%,
+                            #FF1E38 32%,
+                            #FFFFFF 45%,
+                            #FFFFFF 48%,
+                            #FF1E38 53%,
+                            #050002 58%,
+                            #000000 62%,
+                            #050002 66%,
+                            #FF1E38 72%,
                             #FF1E38 100%
                         ) !important;
                         background-size: 300% 100% !important;
-                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                         -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
                         -webkit-mask-composite: xor !important;
                         mask-composite: exclude !important;
                         pointer-events: none !important;
-                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.75)) !important;
+                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.85)) !important;
                     }
 
                     /* Conversation Title Text inside active / hovered conversation box */
@@ -351,19 +354,23 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     div[data-testid="conversation-row-sidebar"]:hover span {
                         background: linear-gradient(
                             90deg,
-                            #FF8596 0%,
-                            #FFFFFF 25%,
-                            #FF1E38 48%,
-                            #FFB3BD 70%,
-                            #FF8596 100%
+                            #FFFFFF 0%,
+                            #FFFFFF 36%,
+                            #FF1E38 43%,
+                            #050002 48%,
+                            #000000 50%,
+                            #050002 52%,
+                            #FF1E38 57%,
+                            #FFFFFF 64%,
+                            #FFFFFF 100%
                         ) !important;
                         background-size: 300% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
-                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                         font-weight: 600 !important;
-                        filter: drop-shadow(0 0 6px rgba(255, 30, 56, 0.55)) !important;
+                        filter: drop-shadow(0 0 6px rgba(255, 30, 56, 0.65)) !important;
                     }
 
                     /* Sidebar "Conversations" Header text */
@@ -373,18 +380,23 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     aside div:has(> [data-testid="conversation-row-sidebar"]) > div:first-child {
                         background: linear-gradient(
                             90deg,
-                            #FF3B54 0%,
-                            #FFA8B5 22%,
+                            #FFFFFF 0%,
                             #FFFFFF 36%,
-                            #FF1E38 55%,
-                            #FF3B54 100%
+                            #FF1E38 43%,
+                            #050002 48%,
+                            #000000 50%,
+                            #050002 52%,
+                            #FF1E38 57%,
+                            #FFFFFF 64%,
+                            #FFFFFF 100%
                         ) !important;
                         background-size: 300% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
-                        animation: eldritch-gradient-flow-ltr 4s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                         letter-spacing: 0.04em !important;
+                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.55)) !important;
                     }
 
                     /* Sticky User Message Bleed Fix (prevent solid block covering video) */
@@ -402,25 +414,29 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                         background: linear-gradient(
                             90deg,
                             #FF1E38 0%,
-                            #FF8092 18%,
-                            #FFFFFF 32%,
-                            #FF334B 48%,
-                            #8A0012 70%,
+                            #FF1E38 32%,
+                            #FFFFFF 45%,
+                            #FFFFFF 48%,
+                            #FF1E38 53%,
+                            #050002 58%,
+                            #000000 62%,
+                            #050002 66%,
+                            #FF1E38 72%,
                             #FF1E38 100%
                         ) !important;
                         background-size: 300% 100% !important;
-                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                         padding: 1.5px !important;
                         border-radius: 14px !important;
                         box-shadow:
-                            0 0 22px rgba(255, 30, 56, 0.52),
+                            0 0 22px rgba(255, 30, 56, 0.55),
                             0 4px 24px rgba(0, 0, 0, 0.9) !important;
                         transition: all 0.25s ease !important;
                     }
 
                     [class*="group/user-input-step"]:hover .bg-card-border {
                         box-shadow:
-                            0 0 26px rgba(255, 30, 56, 0.68),
+                            0 0 28px rgba(255, 30, 56, 0.75),
                             0 4px 28px rgba(0, 0, 0, 0.95) !important;
                     }
 
@@ -432,30 +448,53 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                         box-shadow: inset 0 0 16px rgba(255, 30, 56, 0.22) !important;
                     }
 
+                    [class*="group/user-input-step"] .bg-card .whitespace-pre-wrap,
+                    [class*="group/user-input-step"] .bg-card p {
+                        background: linear-gradient(
+                            90deg,
+                            #FFFFFF 0%,
+                            #FFFFFF 36%,
+                            #FF1E38 43%,
+                            #050002 48%,
+                            #000000 50%,
+                            #050002 52%,
+                            #FF1E38 57%,
+                            #FFFFFF 64%,
+                            #FFFFFF 100%
+                        ) !important;
+                        background-size: 300% 100% !important;
+                        -webkit-background-clip: text !important;
+                        background-clip: text !important;
+                        -webkit-text-fill-color: transparent !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
+                        filter: drop-shadow(0 0 6px rgba(255, 30, 56, 0.55)) !important;
+                        font-weight: 500 !important;
+                    }
+
                     /* ==========================================================================
                        TRANSLUCENT BLACK GLASSMORPHIC AGENT MESSAGE BUBBLES
                        ========================================================================== */
                     .gap-y-3 > .flex.items-start:not(:has([class*="group/user-input-step"])) > .flex-col {
                         background: linear-gradient(160deg, rgba(6, 0, 2, 0.76) 0%, rgba(0, 0, 0, 0.84) 100%) !important;
                         backdrop-filter: blur(16px) saturate(140%) !important;
-                        border: 1px solid rgba(255, 30, 56, 0.42) !important;
+                        border: 1px solid rgba(255, 30, 56, 0.45) !important;
                         border-radius: 14px !important;
                         padding: 14px 18px !important;
                         margin-top: 4px !important;
                         margin-bottom: 4px !important;
                         box-shadow:
                             0 10px 32px rgba(0, 0, 0, 0.92),
-                            0 0 14px rgba(255, 30, 56, 0.16),
-                            inset 0 1px 0 rgba(255, 30, 56, 0.3) !important;
+                            0 0 16px rgba(255, 30, 56, 0.22),
+                            inset 0 1px 0 rgba(255, 30, 56, 0.35) !important;
                         transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
                     }
 
                     .gap-y-3 > .flex.items-start:not(:has([class*="group/user-input-step"])) > .flex-col:hover {
-                        border-color: rgba(255, 30, 56, 0.72) !important;
+                        border-color: rgba(255, 30, 56, 0.85) !important;
                         box-shadow:
-                            0 12px 36px rgba(0, 0, 0, 0.95),
-                            0 0 22px rgba(255, 30, 56, 0.28),
-                            inset 0 1px 0 rgba(255, 30, 56, 0.45) !important;
+                            0 12px 38px rgba(0, 0, 0, 0.95),
+                            0 0 24px rgba(255, 30, 56, 0.4),
+                            inset 0 1px 0 rgba(255, 30, 56, 0.55) !important;
                     }
 
                     /* ==========================================================================
@@ -465,17 +504,21 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                         background: linear-gradient(
                             90deg,
                             #FF1E38 0%,
-                            #FF8092 18%,
-                            #FFFFFF 32%,
-                            #FF334B 48%,
-                            #8A0012 70%,
+                            #FF1E38 32%,
+                            #FFFFFF 45%,
+                            #FFFFFF 48%,
+                            #FF1E38 53%,
+                            #050002 58%,
+                            #000000 62%,
+                            #050002 66%,
+                            #FF1E38 72%,
                             #FF1E38 100%
                         ) !important;
                         background-size: 300% 100% !important;
-                        animation: eldritch-gradient-flow-ltr 3.2s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                         padding: 1.5px !important;
                         box-shadow:
-                            0 0 24px rgba(255, 30, 56, 0.45),
+                            0 0 24px rgba(255, 30, 56, 0.5),
                             0 8px 32px rgba(0, 0, 0, 0.95) !important;
                         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
                     }
@@ -655,48 +698,50 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     h1, h2, h3, h4 {
                         background: linear-gradient(
                             90deg,
-                            #FF1E38 0%,
-                            #FF7588 15%,
-                            #FFFFFF 28%,
-                            #FF99A8 38%,
-                            #FF1E38 52%,
-                            #8A0012 68%,
-                            #FF1E38 85%,
-                            #FF7588 95%,
+                            #FFFFFF 0%,
+                            #FFFFFF 36%,
+                            #FF1E38 43%,
+                            #050002 48%,
+                            #000000 50%,
+                            #050002 52%,
+                            #FF1E38 57%,
+                            #FFFFFF 64%,
                             #FFFFFF 100%
                         ) !important;
                         background-size: 300% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
-                        color: #FF2A44 !important;
-                        filter: drop-shadow(0 0 12px rgba(255, 30, 56, 0.55)) !important;
+                        color: #FFFFFF !important;
+                        filter: drop-shadow(0 0 12px rgba(255, 30, 56, 0.65)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)) !important;
                         letter-spacing: 0.02em !important;
-                        animation: eldritch-gradient-flow-ltr 3.4s linear infinite !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                     }
 
                     h1:hover, h2:hover, h3:hover, h4:hover {
-                        filter: drop-shadow(0 0 16px rgba(255, 30, 56, 0.95)) !important;
+                        filter: drop-shadow(0 0 18px rgba(255, 30, 56, 0.95)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.8)) !important;
                     }
 
                     strong, b {
                         background: linear-gradient(
                             90deg,
-                            #FF475E 0%,
-                            #FFA8B5 18%,
-                            #FFFFFF 30%,
-                            #FFA8B5 44%,
-                            #FF2E47 60%,
-                            #9E0015 76%,
-                            #FF475E 100%
+                            #FFFFFF 0%,
+                            #FFFFFF 36%,
+                            #FF2E47 43%,
+                            #050002 48%,
+                            #000000 50%,
+                            #050002 52%,
+                            #FF2E47 57%,
+                            #FFFFFF 64%,
+                            #FFFFFF 100%
                         ) !important;
                         background-size: 300% 100% !important;
                         -webkit-background-clip: text !important;
                         background-clip: text !important;
                         -webkit-text-fill-color: transparent !important;
-                        color: #FF475E !important;
-                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.42)) !important;
-                        animation: eldritch-gradient-flow-ltr 4s linear infinite !important;
+                        color: #FFFFFF !important;
+                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.55)) !important;
+                        animation: eldritch-gradient-flow-ltr 2.8s linear infinite !important;
                     }
 
                     strong:hover, b:hover {
