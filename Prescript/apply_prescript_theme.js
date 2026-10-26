@@ -1,8 +1,22 @@
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 const IMAGE_PATH = path.join(__dirname, 'prescript_source.webp');
+const ICO_PATH = path.join(__dirname, 'prescript.ico');
 const TYPEWRITER_PATH = path.join(__dirname, 'typewriter.core.js');
+
+// Update Windows Shortcut Icon for Taskbar
+try {
+    if (fs.existsSync(ICO_PATH)) {
+        const escapedIco = ICO_PATH.replace(/\\/g, '\\\\');
+        const psCmd = `powershell -WindowStyle Hidden -Command "$wsh = New-Object -ComObject WScript.Shell; $lnk = [System.IO.Path]::Combine($env:APPDATA, 'Microsoft\\Windows\\Start Menu\\Programs\\Antigravity.lnk'); if (Test-Path $lnk) { $s = $wsh.CreateShortcut($lnk); $s.IconLocation = '${escapedIco},0'; $s.Save() }"`;
+        exec(psCmd, (err) => {
+            if (err) console.log('Shortcut icon notice:', err.message);
+            else console.log('Windows taskbar shortcut icon updated to Prescript emblem!');
+        });
+    }
+} catch (e) {}
 
 const PRESCRIPT_CSS = `
     :root, .dark, .theme-dark, body {
@@ -53,14 +67,9 @@ const PRESCRIPT_CSS = `
         }
     }
 
-    /* ==========================================================================
-       LOGO PLACEMENT: STRICTLY ON TOP OF (ABOVE) "ASK ANYTHING" BOX
-       ========================================================================== */
+    /* Prescript Index Hand Emblem Container */
     #prescript-hand-bg {
         position: fixed !important;
-        left: 54% !important;
-        top: calc(50% - 90px) !important;
-        transform: translate(-50%, -100%) !important;
         z-index: 0 !important;
         pointer-events: none !important;
         display: flex !important;
@@ -70,6 +79,7 @@ const PRESCRIPT_CSS = `
         background: transparent !important;
         box-shadow: none !important;
         border: none !important;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
     .prescript-hand-img {
@@ -86,15 +96,9 @@ const PRESCRIPT_CSS = `
         pointer-events: none !important;
     }
 
-    /* ==========================================================================
-       QUOTE PLACEMENT: STRICTLY UNDER "ASK ANYTHING" BOX
-       ========================================================================== */
+    /* Prescript Dynamic Quote Decree Caption */
     #prescript-quote-box {
         position: fixed !important;
-        left: 54% !important;
-        top: calc(50% + 75px) !important;
-        bottom: auto !important;
-        transform: translateX(-50%) !important;
         z-index: 2 !important;
         pointer-events: none !important;
         max-width: min(650px, 80vw) !important;
@@ -105,7 +109,23 @@ const PRESCRIPT_CSS = `
         letter-spacing: 0.14em !important;
         color: rgba(130, 238, 255, 0.85) !important;
         text-shadow: 0 0 10px rgba(0, 229, 255, 0.6) !important;
-        transition: opacity 0.3s ease !important;
+        transition: opacity 0.3s ease, left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    /* Prescript Top App Icon (Replacing Antigravity top logo) */
+    .prescript-top-app-icon {
+        width: 22px !important;
+        height: 22px !important;
+        object-fit: contain !important;
+        filter: drop-shadow(0 0 6px #00E5FF) !important;
+        vertical-align: middle !important;
+        cursor: pointer !important;
+        transition: transform 0.2s ease !important;
+    }
+
+    .prescript-top-app-icon:hover {
+        transform: scale(1.12) rotate(4deg) !important;
+        filter: drop-shadow(0 0 10px #00F0FF) !important;
     }
 
     #prescript-vignette-overlay {
@@ -526,7 +546,8 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     cleanupListeners: null,
                     activeTargetContainer: null,
                     activeHoverLeaf: null,
-                    lastFrameTime: performance.now()
+                    lastFrameTime: performance.now(),
+                    lastLayoutCheck: 0
                 };
                 window.__prescriptState = state;
 
@@ -560,13 +581,11 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     handBg.innerHTML = '<img class="prescript-hand-img" src="' + handDataUrl + '" alt="The Index Hand Emblem" />';
                     document.body.prepend(handBg);
                 } else {
-                    // Ensure quote box is NEVER a child of handBg
                     const childQuote = handBg.querySelector('#prescript-quote-box');
                     if (childQuote) childQuote.remove();
                     const img = handBg.querySelector('.prescript-hand-img');
                     if (img && img.src !== handDataUrl) img.src = handDataUrl;
                 }
-                handBg.style.cssText = '';
 
                 // (c) Dedicated Prescript Quote Box directly on document.body
                 let quoteBox = document.getElementById('prescript-quote-box');
@@ -579,7 +598,6 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     quoteBox.remove();
                     document.body.appendChild(quoteBox);
                 }
-                quoteBox.style.cssText = '';
 
                 // (d) Obsidian-Black OLED Vignette Overlay
                 let vignette = document.getElementById('prescript-vignette-overlay');
@@ -588,6 +606,34 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     vignette.id = 'prescript-vignette-overlay';
                     document.body.prepend(vignette);
                 }
+
+                // Update Antigravity Top Logo (data-testid="app-icon-new-conversation-button")
+                function updateTopLogo() {
+                    const btn = document.querySelector('[data-testid="app-icon-new-conversation-button"]');
+                    if (btn) {
+                        const svg = btn.querySelector('svg');
+                        if (svg) svg.style.display = 'none';
+                        let icon = btn.querySelector('.prescript-top-app-icon');
+                        if (!icon) {
+                            icon = document.createElement('img');
+                            icon.className = 'prescript-top-app-icon';
+                            icon.src = handDataUrl;
+                            icon.alt = 'Prescript';
+                            btn.appendChild(icon);
+                        }
+                    }
+
+                    // Update Favicon / App Icon
+                    let link = document.querySelector('link[rel*="icon"]');
+                    if (!link) {
+                        link = document.createElement('link');
+                        link.rel = 'icon';
+                        document.head.appendChild(link);
+                    }
+                    link.type = 'image/webp';
+                    link.href = handDataUrl;
+                }
+                updateTopLogo();
 
                 function ensureDOMElements() {
                     if (!document.getElementById('prescript-fate-canvas')) {
@@ -602,10 +648,61 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     if (!document.getElementById('prescript-vignette-overlay')) {
                         document.body.prepend(vignette);
                     }
+                    updateTopLogo();
                 }
 
                 // =========================================================================
-                // 2. DYNAMIC PRESCRIPT QUOTE GENERATOR & SMOOTH TYPEWRITER LOOP (16s)
+                // 2. DYNAMIC LAYOUT SYMMETRY CONTROLLER
+                // - New Conversation: Perfectly symmetrical horizontally with "Ask anything" box,
+                //   Logo on top of box, Quote under box.
+                // - In Conversation: Back to normal background center.
+                // =========================================================================
+                function updatePrescriptLayout(now) {
+                    if (now && now - state.lastLayoutCheck < 150) return;
+                    state.lastLayoutCheck = now || performance.now();
+
+                    const curHand = document.getElementById('prescript-hand-bg');
+                    const curQuote = document.getElementById('prescript-quote-box');
+                    if (!curHand || !curQuote) return;
+
+                    const composer = document.getElementById('antigravity.agentSidePanelInputBox') || document.querySelector('.rounded-2xl.bg-card-border');
+                    const compRect = composer ? composer.getBoundingClientRect() : null;
+                    const messages = document.querySelectorAll('[class*="group/user-input-step"], [class*="user-input-step"]');
+
+                    // Active chat with messages: composer docked near bottom
+                    const isInChat = messages.length > 0 && compRect && compRect.top > window.innerHeight * 0.65;
+
+                    if (isInChat) {
+                        // BACK TO NORMAL CONVERSATION LAYOUT
+                        curHand.style.left = '54%';
+                        curHand.style.top = '46%';
+                        curHand.style.transform = 'translate(-50%, -50%)';
+
+                        curQuote.style.left = '54%';
+                        curQuote.style.top = 'calc(46% + 140px)';
+                        curQuote.style.transform = 'translateX(-50%)';
+                        curQuote.style.maxWidth = 'min(650px, 80vw)';
+                    } else if (compRect) {
+                        // SYMMETRICAL NEW CONVERSATION LAYOUT:
+                        // Center is strictly based on the composer's exact center coordinates
+                        const centerX = compRect.left + compRect.width / 2;
+
+                        // Logo on top of "Ask anything" box
+                        curHand.style.left = centerX + 'px';
+                        curHand.style.top = (compRect.top - 16) + 'px';
+                        curHand.style.transform = 'translate(-50%, -100%)';
+
+                        // Quote under "Ask anything" box
+                        curQuote.style.left = centerX + 'px';
+                        curQuote.style.top = (compRect.bottom + 16) + 'px';
+                        curQuote.style.transform = 'translateX(-50%)';
+                        curQuote.style.maxWidth = Math.min(compRect.width, 680) + 'px';
+                    }
+                }
+                updatePrescriptLayout();
+
+                // =========================================================================
+                // 3. DYNAMIC PRESCRIPT QUOTE GENERATOR & SMOOTH TYPEWRITER LOOP (16s)
                 // =========================================================================
                 const canonicalPrescripts = [
                     "To the one who receives this: Drink a cup of lukewarm water at 3:14, then look toward the northernmost tower.",
@@ -696,7 +793,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 }, 16000);
 
                 // =========================================================================
-                // 3. CYAN STRINGS OF FATE CANVAS & WATCHDOG LOOP
+                // 4. CYAN STRINGS OF FATE CANVAS & WATCHDOG LOOP
                 // =========================================================================
                 const ctx = fateCanvas.getContext('2d');
                 function resizeCanvas() {
@@ -744,6 +841,8 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
 
                 function renderFateStrings(now) {
                     state.lastFrameTime = now;
+                    updatePrescriptLayout(now);
+
                     if (document.hidden) {
                         state.animFrame = requestAnimationFrame(renderFateStrings);
                         return;
@@ -795,6 +894,7 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 state.watchdog = setInterval(() => {
                     ensureDOMElements();
                     resizeCanvas();
+                    updatePrescriptLayout();
                     const now = performance.now();
                     if (!document.hidden && now - state.lastFrameTime > 2500) {
                         if (state.animFrame) cancelAnimationFrame(state.animFrame);
@@ -941,7 +1041,10 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
 
                 document.body.addEventListener('mouseover', onPrescriptMouseOver, { passive: true });
                 document.body.addEventListener('mouseout', onPrescriptMouseOut, { passive: true });
-                window.addEventListener('resize', resizeCanvas, { passive: true });
+                window.addEventListener('resize', () => {
+                    resizeCanvas();
+                    updatePrescriptLayout();
+                }, { passive: true });
 
                 state.cleanupListeners = () => {
                     document.body.removeEventListener('mouseover', onPrescriptMouseOver);
@@ -949,14 +1052,15 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                     window.removeEventListener('resize', resizeCanvas);
                 };
 
-                // Dynamic DOM Observer for instant recovery
+                // Dynamic DOM Observer for instant recovery & alignment checks
                 const observer = new MutationObserver(() => {
                     ensureDOMElements();
+                    updatePrescriptLayout();
                 });
-                observer.observe(document.body, { childList: true });
+                observer.observe(document.body, { childList: true, subtree: true });
                 state.observer = observer;
 
-                return 'Prescript Theme Live: Logo On Top of Ask Anything, Quote Under Ask Anything!';
+                return 'Prescript Theme Live: Symmetrical New Conversation, Normal Active Chat, and Prescript App Icons!';
             })();`;
 
             ws.send(JSON.stringify({
