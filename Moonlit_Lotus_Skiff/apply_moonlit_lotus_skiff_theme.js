@@ -137,6 +137,82 @@ const MOONLIT_CSS = `
         transition: opacity 0.3s ease, left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
+    /* Time & Date Moon Phase Calendar Card */
+    #moonlit-calendar-card {
+        position: fixed !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(6, 12, 24, 0.88) !important;
+        border: 1px solid rgba(56, 189, 248, 0.35) !important;
+        border-radius: 14px !important;
+        backdrop-filter: blur(18px) saturate(140%) !important;
+        padding: 9px 22px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 18px rgba(56, 189, 248, 0.22) !important;
+        transition: opacity 0.35s ease, left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+    }
+
+    .moonlit-cal-quarters-row {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 20px !important;
+    }
+
+    .moonlit-cal-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 3px !important;
+        opacity: 0.62 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .moonlit-cal-item.active {
+        opacity: 1 !important;
+        transform: scale(1.08) !important;
+    }
+
+    .moonlit-cal-item.active svg {
+        filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 4px #bae6fd) !important;
+    }
+
+    .moonlit-cal-name {
+        font-size: 10px !important;
+        letter-spacing: 0.08em !important;
+        color: #94a3b8 !important;
+        text-transform: uppercase !important;
+        font-weight: 500 !important;
+    }
+
+    .moonlit-cal-item.active .moonlit-cal-name {
+        color: #7dd3fc !important;
+        font-weight: 700 !important;
+    }
+
+    .moonlit-cal-date {
+        font-size: 11px !important;
+        color: #cbd5e1 !important;
+        font-weight: 500 !important;
+    }
+
+    .moonlit-cal-item.active .moonlit-cal-date {
+        color: #ffffff !important;
+        text-shadow: 0 0 8px rgba(56, 189, 248, 0.85) !important;
+    }
+
+    .moonlit-cal-telemetry {
+        font-size: 11px !important;
+        color: rgba(125, 211, 252, 0.95) !important;
+        letter-spacing: 0.06em !important;
+        margin-top: 7px !important;
+        text-align: center !important;
+    }
+
     /* Moonlit Top App Icon Button */
     button[data-testid="app-icon-new-conversation-button"] {
         padding: 0 4px !important;
@@ -463,22 +539,16 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 try { if (window.__moonlitAnimFrame) { cancelAnimationFrame(window.__moonlitAnimFrame); window.__moonlitAnimFrame = null; } } catch(e){}
                 try { if (window.__moonlitCleanupListeners) { window.__moonlitCleanupListeners(); window.__moonlitCleanupListeners = null; } } catch(e){}
 
+                // Clean up non-Moonlit theme elements
                 [
                     'eldritch-hover-eye-popup', 'eldritch-ambient-rifts-canvas', 'eldritch-bg-video',
                     'eldritch-vignette-overlay', 'eldritch-rift-header',
                     'prescript-fate-canvas', 'prescript-hand-bg', 'prescript-quote-box',
                     'prescript-vignette-overlay', 'prescript-header-insignia',
-                    'capri-companion-root', 'capri-lightning-canvas', 'capri-top-popout',
-                    'moonlit-bg-video', 'moonlit-vignette-overlay', 'moonlit-particles-canvas',
-                    'moonlit-lotus-emblem', 'moonlit-poem-box'
+                    'capri-companion-root', 'capri-lightning-canvas', 'capri-top-popout'
                 ].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) {
-                        if (el.dataset && el.dataset.oldBlobUrl) {
-                            try { URL.revokeObjectURL(el.dataset.oldBlobUrl); } catch (e) {}
-                        }
-                        el.remove();
-                    }
+                    if (el) el.remove();
                 });
 
                 // Single global state object
@@ -488,6 +558,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     poemInterval: null,
                     poemTimer: null,
                     observer: null,
+                    observerDebounce: null,
                     cleanupListeners: null,
                     activeTargetContainer: null,
                     activeHoverLeaf: null,
@@ -502,40 +573,42 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 window.__moonlitState = state;
 
                 // =========================================================================
-                // 1. VIDEO WALLPAPER & BLOBS
+                // 1. VIDEO WALLPAPER & BLOBS (REUSED IF ALREADY ACTIVE)
                 // =========================================================================
-                const b64 = "${videoBase64}";
-                const binStr = atob(b64);
-                const len = binStr.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binStr.charCodeAt(i);
-                }
-                const blob = new Blob([bytes], { type: 'video/mp4' });
-                const blobUrl = URL.createObjectURL(blob);
-
                 let video = document.getElementById('moonlit-bg-video');
-                if (!video) {
-                    video = document.createElement('video');
-                    video.id = 'moonlit-bg-video';
-                    document.body.prepend(video);
-                }
-                video.muted = true;
-                video.defaultMuted = true;
-                video.autoplay = true;
-                video.loop = true;
-                video.playsInline = true;
-                video.setAttribute('muted', '');
-                video.setAttribute('autoplay', '');
-                video.setAttribute('loop', '');
-                video.setAttribute('playsinline', '');
-                video.dataset.oldBlobUrl = blobUrl;
-                video.src = blobUrl;
-                video.oncanplay = () => {
+                if (!video || !video.src) {
+                    const b64 = "${videoBase64}";
+                    const binStr = atob(b64);
+                    const len = binStr.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binStr.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: 'video/mp4' });
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    if (!video) {
+                        video = document.createElement('video');
+                        video.id = 'moonlit-bg-video';
+                        document.body.prepend(video);
+                    }
                     video.muted = true;
+                    video.defaultMuted = true;
+                    video.autoplay = true;
+                    video.loop = true;
+                    video.playsInline = true;
+                    video.setAttribute('muted', '');
+                    video.setAttribute('autoplay', '');
+                    video.setAttribute('loop', '');
+                    video.setAttribute('playsinline', '');
+                    video.dataset.oldBlobUrl = blobUrl;
+                    video.src = blobUrl;
+                    video.oncanplay = () => {
+                        video.muted = true;
+                        video.play().catch(() => {});
+                    };
                     video.play().catch(() => {});
-                };
-                video.play().catch(() => {});
+                }
 
                 // =========================================================================
                 // 2. VIGNETTE & EMBLEM DOM ELEMENTS
@@ -548,139 +621,157 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 }
 
                 // =========================================================================
-                // 2. REAL-LIFE ASTRONOMICAL BLUE MOON PHASE ENGINE
+                // 2. REAL-LIFE TIME & DATE ASTRONOMICAL BLUE MOON ENGINE
                 // =========================================================================
-                function getRealLifeMoonPhase(date = new Date()) {
-                    // Reference astronomical new moon: Jan 11, 2024 11:57:00 UTC
-                    const refNewMoon = new Date(Date.UTC(2024, 0, 11, 11, 57, 0)).getTime();
+                function getLunarCalendar(date = new Date()) {
                     const synodicMonth = 29.53058867 * 24 * 60 * 60 * 1000;
-                    const diff = date.getTime() - refNewMoon;
-                    const cycles = (diff % synodicMonth) / synodicMonth;
-                    const phase = cycles < 0 ? cycles + 1 : cycles;
+                    const refNewMoon = new Date(Date.UTC(2024, 0, 11, 11, 57, 0)).getTime();
+                    const now = date.getTime();
+                    
+                    const totalCycles = (now - refNewMoon) / synodicMonth;
+                    const currentCycleIndex = Math.floor(totalCycles);
+                    const currentPhase = totalCycles - currentCycleIndex;
+                    
+                    const cycleStart = refNewMoon + currentCycleIndex * synodicMonth;
+                    const phases = [
+                        { name: 'New Moon', fraction: 0.0, time: new Date(cycleStart) },
+                        { name: 'First Quarter', fraction: 0.25, time: new Date(cycleStart + 0.25 * synodicMonth) },
+                        { name: 'Full Moon', fraction: 0.50, time: new Date(cycleStart + 0.50 * synodicMonth) },
+                        { name: 'Third Quarter', fraction: 0.75, time: new Date(cycleStart + 0.75 * synodicMonth) }
+                    ];
+                    
+                    const illumination = Math.round(0.5 * (1 - Math.cos(currentPhase * 2 * Math.PI)) * 100);
+                    const moonAgeDays = (currentPhase * 29.53058867).toFixed(1);
+                    
+                    let currentPhaseName = '';
+                    if (currentPhase < 0.025 || currentPhase > 0.975) currentPhaseName = 'New Moon';
+                    else if (currentPhase < 0.22) currentPhaseName = 'Waxing Crescent';
+                    else if (currentPhase < 0.28) currentPhaseName = 'First Quarter';
+                    else if (currentPhase < 0.47) currentPhaseName = 'Waxing Gibbous';
+                    else if (currentPhase < 0.53) currentPhaseName = 'Full Moon';
+                    else if (currentPhase < 0.72) currentPhaseName = 'Waning Gibbous';
+                    else if (currentPhase < 0.78) currentPhaseName = 'Third Quarter';
+                    else currentPhaseName = 'Waning Crescent';
 
-                    let phaseName = '';
-                    if (phase < 0.025 || phase > 0.975) phaseName = 'New Moon';
-                    else if (phase < 0.22) phaseName = 'Waxing Crescent';
-                    else if (phase < 0.28) phaseName = 'First Quarter';
-                    else if (phase < 0.47) phaseName = 'Waxing Gibbous';
-                    else if (phase < 0.53) phaseName = 'Full Moon';
-                    else if (phase < 0.72) phaseName = 'Waning Gibbous';
-                    else if (phase < 0.78) phaseName = 'Last Quarter';
-                    else phaseName = 'Waning Crescent';
+                    let activeQuarterIdx = 0;
+                    if (currentPhase >= 0.125 && currentPhase < 0.375) activeQuarterIdx = 1;
+                    else if (currentPhase >= 0.375 && currentPhase < 0.625) activeQuarterIdx = 2;
+                    else if (currentPhase >= 0.625 && currentPhase < 0.875) activeQuarterIdx = 3;
 
-                    const illumination = Math.round(0.5 * (1 - Math.cos(phase * 2 * Math.PI)) * 100);
-                    const ageDays = (phase * 29.53).toFixed(1);
-                    return { phase, phaseName, illumination, ageDays };
+                    const nextPhases = [
+                        ...phases,
+                        { name: 'New Moon', fraction: 1.0, time: new Date(cycleStart + synodicMonth) }
+                    ];
+                    const upcoming = nextPhases.find(p => p.time.getTime() > now) || nextPhases[4];
+                    const diffDays = Math.max(0.1, (upcoming.time.getTime() - now) / (1000 * 60 * 60 * 24)).toFixed(1);
+
+                    return {
+                        currentPhase,
+                        currentPhaseName,
+                        illumination,
+                        moonAgeDays,
+                        activeQuarterIdx,
+                        upcoming: {
+                            name: upcoming.name,
+                            date: upcoming.time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            diffDays
+                        },
+                        quarters: phases.map((p, idx) => ({
+                            name: p.name,
+                            fraction: p.fraction,
+                            dateStr: p.time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            isActive: idx === activeQuarterIdx
+                        }))
+                    };
                 }
 
-                function generateBlueMoonDataUrl(size, phase) {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = size;
-                    canvas.height = size;
-                    const ctx = canvas.getContext('2d');
+                function generateTadMoonSvg(phase, size = 32) {
+                    const p = ((phase % 1.0) + 1.0) % 1.0;
+                    const isWaxing = p <= 0.5;
+                    const cosP = Math.cos(p * 2 * Math.PI);
+                    const r = size * 0.40;
                     const cx = size / 2;
                     const cy = size / 2;
-                    const r = size * 0.38;
-
-                    // (a) Ambient Atmospheric Cyan Glow
-                    const glow = ctx.createRadialGradient(cx, cy, r * 0.75, cx, cy, r * 1.4);
-                    glow.addColorStop(0, 'rgba(56, 189, 248, 0.65)');
-                    glow.addColorStop(0.45, 'rgba(2, 132, 199, 0.25)');
-                    glow.addColorStop(1, 'rgba(6, 11, 22, 0)');
-                    ctx.fillStyle = glow;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r * 1.4, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // (b) Base Dark Moon (Earthshine Sphere)
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                    ctx.clip();
-
-                    const darkGrad = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.25, 0, cx, cy, r);
-                    darkGrad.addColorStop(0, '#0c1a2e');
-                    darkGrad.addColorStop(0.7, '#07101f');
-                    darkGrad.addColorStop(1, '#030712');
-                    ctx.fillStyle = darkGrad;
-                    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-
-                    // (c) Lit Moon Surface (Astronomical Terminator Arc)
-                    const p = phase % 1.0;
-                    const cosP = Math.cos(p * 2 * Math.PI);
-                    const isWaxing = p <= 0.5;
                     const rx = Math.max(0.1, r * Math.abs(cosP));
 
-                    ctx.beginPath();
+                    let litPath = '';
                     if (isWaxing) {
-                        ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, false);
                         if (cosP >= 0) {
-                            ctx.ellipse(cx, cy, rx, r, 0, Math.PI / 2, -Math.PI / 2, true);
+                            litPath = 'M ' + cx + ' ' + (cy - r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy + r) + ' A ' + rx + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy - r) + ' Z';
                         } else {
-                            ctx.ellipse(cx, cy, rx, r, 0, Math.PI / 2, -Math.PI / 2, false);
+                            litPath = 'M ' + cx + ' ' + (cy - r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy + r) + ' A ' + rx + ' ' + r + ' 0 0 0 ' + cx + ' ' + (cy - r) + ' Z';
                         }
                     } else {
-                        ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2, false);
                         if (cosP >= 0) {
-                            ctx.ellipse(cx, cy, rx, r, 0, -Math.PI / 2, Math.PI / 2, true);
+                            litPath = 'M ' + cx + ' ' + (cy + r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy - r) + ' A ' + rx + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy + r) + ' Z';
                         } else {
-                            ctx.ellipse(cx, cy, rx, r, 0, -Math.PI / 2, Math.PI / 2, false);
+                            litPath = 'M ' + cx + ' ' + (cy + r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + cx + ' ' + (cy - r) + ' A ' + rx + ' ' + r + ' 0 0 0 ' + cx + ' ' + (cy + r) + ' Z';
                         }
                     }
-                    ctx.closePath();
-                    ctx.clip();
 
-                    // Moonlit Azure Texture
-                    const moonGrad = ctx.createRadialGradient(
-                        isWaxing ? cx + r * 0.25 : cx - r * 0.25,
-                        cy - r * 0.2,
-                        0,
-                        cx,
-                        cy,
-                        r * 1.15
-                    );
-                    moonGrad.addColorStop(0, '#ffffff');
-                    moonGrad.addColorStop(0.22, '#e0f2fe');
-                    moonGrad.addColorStop(0.55, '#38bdf8');
-                    moonGrad.addColorStop(0.85, '#0284c7');
-                    moonGrad.addColorStop(1, '#034a7d');
-                    ctx.fillStyle = moonGrad;
-                    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+                    if (p < 0.015 || p > 0.985) litPath = '';
+                    if (Math.abs(p - 0.5) < 0.015) {
+                        litPath = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 1 0 ' + (cx + r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 1 0 ' + (cx - r) + ' ' + cy + ' Z';
+                    }
 
-                    // Lunar Maria Craters
-                    ctx.fillStyle = 'rgba(2, 100, 160, 0.35)';
-                    ctx.beginPath(); ctx.arc(cx - r * 0.18, cy - r * 0.18, r * 0.26, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(cx + r * 0.25, cy - r * 0.12, r * 0.22, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(cx - r * 0.08, cy + r * 0.28, r * 0.32, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(cx + r * 0.32, cy + r * 0.25, r * 0.18, 0, Math.PI * 2); ctx.fill();
+                    const uniqueId = Math.round(phase * 1000) + '_' + size;
+                    const gradId = 'bmLit_' + uniqueId;
+                    const clipId = 'bmClip_' + uniqueId;
 
-                    // Bright Ray Craters
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-                    ctx.beginPath(); ctx.arc(cx + (isWaxing ? r * 0.28 : -r * 0.28), cy + r * 0.35, r * 0.05, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(cx + (isWaxing ? r * 0.12 : -r * 0.12), cy - r * 0.35, r * 0.04, 0, Math.PI * 2); ctx.fill();
+                    let craterDefs = '';
+                    let craterBody = '';
+                    if (size >= 64 && litPath) {
+                        const s = r / 100;
+                        craterDefs = '<clipPath id=\"' + clipId + '\"><path d=\"' + litPath + '\" /></clipPath>';
+                        craterBody = '<g clip-path=\"url(#' + clipId + ')\">' +
+                            '<circle cx=\"' + (cx - 20 * s) + '\" cy=\"' + (cy - 18 * s) + '\" r=\"' + (24 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
+                            '<circle cx=\"' + (cx + 22 * s) + '\" cy=\"' + (cy - 10 * s) + '\" r=\"' + (20 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
+                            '<circle cx=\"' + (cx - 8 * s) + '\" cy=\"' + (cy + 26 * s) + '\" r=\"' + (28 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
+                            '<circle cx=\"' + (cx + 30 * s) + '\" cy=\"' + (cy + 22 * s) + '\" r=\"' + (16 * s) + '\" fill=\"rgba(2, 100, 160, 0.28)\" />' +
+                            '<circle cx=\"' + (cx + (isWaxing ? 28 : -28) * s) + '\" cy=\"' + (cy + 35 * s) + '\" r=\"' + (5 * s) + '\" fill=\"rgba(255, 255, 255, 0.65)\" />' +
+                            '<circle cx=\"' + (cx + (isWaxing ? 12 : -12) * s) + '\" cy=\"' + (cy - 35 * s) + '\" r=\"' + (4 * s) + '\" fill=\"rgba(255, 255, 255, 0.65)\" />' +
+                            '</g>';
+                    }
 
-                    ctx.restore();
-
-                    // Outer Rim Glint
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
-                    ctx.strokeStyle = 'rgba(125, 211, 252, 0.45)';
-                    ctx.lineWidth = 1.0;
-                    ctx.stroke();
-
-                    return canvas.toDataURL('image/png');
+                    return '<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ' + size + ' ' + size + '\" width=\"' + size + '\" height=\"' + size + '\">' +
+                        '<defs>' +
+                            '<linearGradient id=\"' + gradId + '\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">' +
+                                '<stop offset=\"0%\" stop-color=\"#ffffff\" />' +
+                                '<stop offset=\"25%\" stop-color=\"#bae6fd\" />' +
+                                '<stop offset=\"65%\" stop-color=\"#38bdf8\" />' +
+                                '<stop offset=\"100%\" stop-color=\"#0284c7\" />' +
+                            '</linearGradient>' +
+                            craterDefs +
+                        '</defs>' +
+                        '<circle cx=\"' + cx + '\" cy=\"' + cy + '\" r=\"' + (r * 1.25) + '\" fill=\"rgba(56, 189, 248, 0.25)\" />' +
+                        '<circle cx=\"' + cx + '\" cy=\"' + cy + '\" r=\"' + r + '\" fill=\"#08101e\" stroke=\"#38bdf8\" stroke-width=\"1.2\" stroke-opacity=\"0.4\" />' +
+                        (litPath ? '<path d=\"' + litPath + '\" fill=\"url(#' + gradId + ')\" />' : '') +
+                        craterBody +
+                        '<circle cx=\"' + cx + '\" cy=\"' + cy + '\" r=\"' + r + '\" fill=\"none\" stroke=\"#7dd3fc\" stroke-width=\"1.2\" stroke-opacity=\"0.6\" />' +
+                    '</svg>';
                 }
 
-                let currentMoonInfo = getRealLifeMoonPhase();
-                let currentSmallMoonUrl = generateBlueMoonDataUrl(72, currentMoonInfo.phase);
-                let currentLargeMoonUrl = generateBlueMoonDataUrl(320, currentMoonInfo.phase);
+                function svgToDataUrl(svg) {
+                    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+                }
+
+                let currentCal = getLunarCalendar();
+                let currentSmallMoonUrl = svgToDataUrl(generateTadMoonSvg(currentCal.currentPhase, 36));
+                let currentLargeMoonUrl = svgToDataUrl(generateTadMoonSvg(currentCal.currentPhase, 220));
 
                 let emblem = document.getElementById('moonlit-lotus-emblem');
                 if (!emblem) {
                     emblem = document.createElement('div');
                     emblem.id = 'moonlit-lotus-emblem';
-                    emblem.innerHTML = '<img class="moonlit-lotus-img" src="' + currentLargeMoonUrl + '" alt="Real-Life Blue Moon" />';
+                    emblem.innerHTML = '<img class=\"moonlit-lotus-img\" src=\"' + currentLargeMoonUrl + '\" alt=\"Real-Life Blue Moon\" />';
                     document.body.prepend(emblem);
+                }
+
+                let calendarCard = document.getElementById('moonlit-calendar-card');
+                if (!calendarCard) {
+                    calendarCard = document.createElement('div');
+                    calendarCard.id = 'moonlit-calendar-card';
+                    document.body.appendChild(calendarCard);
                 }
 
                 let poemBox = document.getElementById('moonlit-poem-box');
@@ -690,14 +781,14 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     document.body.appendChild(poemBox);
                 }
 
-                // Update Antigravity Top Logo and Floating Emblem to Real-Life Blue Moon
+                // Update Antigravity Top Logo, Floating Emblem, Favicon, and Lunar Calendar HUD
                 function updateMoonIcons() {
-                    const nowInfo = getRealLifeMoonPhase();
-                    // If lunar phase changed or first run
-                    currentSmallMoonUrl = generateBlueMoonDataUrl(72, nowInfo.phase);
-                    currentLargeMoonUrl = generateBlueMoonDataUrl(320, nowInfo.phase);
+                    const cal = getLunarCalendar();
+                    const nowPhase = cal.currentPhase;
+                    currentSmallMoonUrl = svgToDataUrl(generateTadMoonSvg(nowPhase, 36));
+                    currentLargeMoonUrl = svgToDataUrl(generateTadMoonSvg(nowPhase, 220));
 
-                    const btn = document.querySelector('[data-testid="app-icon-new-conversation-button"]');
+                    const btn = document.querySelector('[data-testid=\"app-icon-new-conversation-button\"]');
                     if (btn) {
                         const svg = btn.querySelector('svg');
                         if (svg) svg.style.display = 'none';
@@ -708,24 +799,46 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                             btn.appendChild(icon);
                         }
                         if (icon.src !== currentSmallMoonUrl) icon.src = currentSmallMoonUrl;
-                        icon.alt = 'Blue Moon (' + nowInfo.phaseName + ')';
-                        btn.title = 'Real-Life Lunar Phase: ' + nowInfo.phaseName + ' (' + nowInfo.illumination + '% illuminated, Day ' + nowInfo.ageDays + ' of cycle)';
+                        icon.alt = 'Blue Moon (' + cal.currentPhaseName + ')';
+                        btn.title = 'Time & Date Lunar Calendar • ' + cal.currentPhaseName + ' (' + cal.illumination + '%, Day ' + cal.moonAgeDays + ') • Next: ' + cal.upcoming.name + ' in ' + cal.upcoming.diffDays + 'd';
                     }
 
                     const emblemImg = emblem ? emblem.querySelector('.moonlit-lotus-img') : null;
                     if (emblemImg && emblemImg.src !== currentLargeMoonUrl) {
                         emblemImg.src = currentLargeMoonUrl;
-                        emblemImg.alt = 'Real-Life Blue Moon: ' + nowInfo.phaseName;
+                        emblemImg.alt = 'Real-Life Blue Moon: ' + cal.currentPhaseName;
                     }
 
-                    let link = document.querySelector('link[rel*="icon"]');
+                    let link = document.querySelector('link[rel*=\"icon\"]');
                     if (!link) {
                         link = document.createElement('link');
                         link.rel = 'icon';
                         document.head.appendChild(link);
                     }
-                    link.type = 'image/png';
-                    link.href = currentSmallMoonUrl;
+                    if (link && link.href !== currentSmallMoonUrl) {
+                        link.type = 'image/svg+xml';
+                        link.href = currentSmallMoonUrl;
+                    }
+
+                    if (calendarCard) {
+                        const phaseKey = cal.currentPhaseName + '_' + cal.illumination + '_' + cal.activeQuarterIdx;
+                        if (calendarCard.dataset.phaseKey !== phaseKey || !calendarCard.children.length) {
+                            calendarCard.dataset.phaseKey = phaseKey;
+                            calendarCard.innerHTML =
+                                '<div class=\"moonlit-cal-quarters-row\">' +
+                                    cal.quarters.map(q =>
+                                        '<div class=\"moonlit-cal-item ' + (q.isActive ? 'active' : '') + '\">' +
+                                            '<div class=\"moonlit-cal-icon\">' + generateTadMoonSvg(q.fraction, 32) + '</div>' +
+                                            '<div class=\"moonlit-cal-name\">' + q.name + '</div>' +
+                                            '<div class=\"moonlit-cal-date\">' + q.dateStr + '</div>' +
+                                        '</div>'
+                                    ).join('') +
+                                '</div>' +
+                                '<div class=\"moonlit-cal-telemetry\">' +
+                                    '<strong>' + cal.currentPhaseName + '</strong> • ' + cal.illumination + '% Illumination • Day ' + cal.moonAgeDays + ' of Cycle • Next: <strong>' + cal.upcoming.name + '</strong> in ' + cal.upcoming.diffDays + 'd' +
+                                '</div>';
+                        }
+                    }
                 }
                 updateMoonIcons();
 
@@ -996,8 +1109,9 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     state.lastLayoutCheck = now || performance.now();
 
                     const curEmblem = document.getElementById('moonlit-lotus-emblem');
+                    const curCard = document.getElementById('moonlit-calendar-card');
                     const curPoem = document.getElementById('moonlit-poem-box');
-                    if (!curEmblem || !curPoem) return;
+                    if (!curEmblem || !curPoem || !curCard) return;
 
                     const composer = document.getElementById('antigravity.agentSidePanelInputBox') || document.querySelector('.rounded-2xl.bg-card-border');
                     const compRect = composer ? composer.getBoundingClientRect() : null;
@@ -1009,19 +1123,29 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                         // In active chat: fade out so girl on skiff on right is 100% visible
                         curEmblem.style.opacity = '0';
                         curEmblem.style.pointerEvents = 'none';
+                        curCard.style.opacity = '0';
+                        curCard.style.pointerEvents = 'none';
                         curPoem.style.opacity = '0';
                         curPoem.style.pointerEvents = 'none';
                     } else if (compRect) {
                         // In New Conversation: Symmetrical docking above & below composer
                         const centerX = compRect.left + compRect.width / 2;
 
+                        // Floating Blue Moon emblem docked above composer
                         curEmblem.style.left = centerX + 'px';
                         curEmblem.style.top = (compRect.top - 18) + 'px';
                         curEmblem.style.transform = 'translate(-50%, -100%)';
-                        curEmblem.style.opacity = '0.96';
+                        curEmblem.style.opacity = '0.98';
 
+                        // Time & Date Lunar Phase Calendar HUD docked directly below composer
+                        curCard.style.left = centerX + 'px';
+                        curCard.style.top = (compRect.bottom + 14) + 'px';
+                        curCard.style.transform = 'translateX(-50%)';
+                        curCard.style.opacity = '0.96';
+
+                        // Poetic Decree Caption below the calendar card
                         curPoem.style.left = centerX + 'px';
-                        curPoem.style.top = (compRect.bottom + 18) + 'px';
+                        curPoem.style.top = (compRect.bottom + 104) + 'px';
                         curPoem.style.transform = 'translateX(-50%)';
                         curPoem.style.maxWidth = Math.min(compRect.width, 680) + 'px';
                         curPoem.style.opacity = '0.92';
@@ -1165,19 +1289,25 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 };
 
                 function ensureDOMElements() {
-                    if (!document.getElementById('moonlit-particles-canvas')) {
+                    if (!document.getElementById('moonlit-particles-canvas') && canvas) {
                         document.body.prepend(canvas);
                     }
-                    if (!document.getElementById('moonlit-lotus-emblem')) {
+                    if (!document.getElementById('moonlit-lotus-emblem') && emblem) {
                         document.body.prepend(emblem);
                     }
-                    if (!document.getElementById('moonlit-poem-box')) {
+                    if (!document.getElementById('moonlit-calendar-card') && calendarCard) {
+                        document.body.appendChild(calendarCard);
+                    }
+                    if (!document.getElementById('moonlit-poem-box') && poemBox) {
                         document.body.appendChild(poemBox);
                     }
-                    if (!document.getElementById('moonlit-vignette-overlay')) {
+                    if (!document.getElementById('moonlit-vignette-overlay') && vignette) {
                         document.body.prepend(vignette);
                     }
-                    updateMoonIcons();
+                    const btn = document.querySelector('[data-testid=\"app-icon-new-conversation-button\"]');
+                    if (btn && !btn.querySelector('.moonlit-top-app-icon')) {
+                        updateMoonIcons();
+                    }
                 }
 
                 // =========================================================================
@@ -1186,8 +1316,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 state.watchdog = setInterval(() => {
                     ensureDOMElements();
                     resizeCanvas();
-                    updateMoonlitLayout();
-                    updateMoonIcons();
+                    updateMoonlitLayout(performance.now());
                     const now = performance.now();
                     if (!document.hidden && now - state.lastFrameTime > 2500) {
                         if (state.animFrame) cancelAnimationFrame(state.animFrame);
@@ -1195,9 +1324,24 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     }
                 }, 2000);
 
-                const observer = new MutationObserver(() => {
-                    ensureDOMElements();
-                    updateMoonlitLayout();
+                const observer = new MutationObserver((mutations) => {
+                    let shouldHandle = false;
+                    for (let i = 0; i < mutations.length; i++) {
+                        const target = mutations[i].target;
+                        const id = target && target.id ? target.id : '';
+                        if (!id.startsWith('moonlit-')) {
+                            shouldHandle = true;
+                            break;
+                        }
+                    }
+                    if (!shouldHandle) return;
+
+                    if (state.observerDebounce) return;
+                    state.observerDebounce = setTimeout(() => {
+                        state.observerDebounce = null;
+                        ensureDOMElements();
+                        updateMoonlitLayout(performance.now());
+                    }, 80);
                 });
                 observer.observe(document.body, { childList: true, subtree: true });
                 state.observer = observer;
