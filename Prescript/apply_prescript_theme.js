@@ -301,6 +301,9 @@ function injectIntoPage(wsUrl, imgBase64) {
                 window.addEventListener('resize', resizeCanvas);
                 window.__prescriptCleanupListeners = () => {
                     window.removeEventListener('resize', resizeCanvas);
+                    document.removeEventListener('mouseover', onPrescriptMouseOver, true);
+                    document.removeEventListener('mouseout', onPrescriptMouseOut, true);
+                    if (activeTypewriterTarget) resetTypewriter(activeTypewriterTarget);
                 };
 
                 // Pre-rendered offscreen gradient sprites to eliminate 2,000+ GC gradient allocations/sec
@@ -745,6 +748,95 @@ function injectIntoPage(wsUrl, imgBase64) {
                         box-shadow: 0 0 8px rgba(0, 229, 255, 0.6) !important;
                     }
                 \`;
+
+
+                // 6. Interactive Prescript Typewriter Hover Effect
+                // Automatically types out text on hover using the exact font, color, and ▮ cursor as the background Prescript decree
+                function getLeafTextElement(el) {
+                    if (!el || el.closest('.prescript-bg-decree-caption') || el.closest('#prescript-hand-bg')) return null;
+                    if (el.children.length === 0) {
+                        const txt = el.textContent.trim();
+                        return (txt.length > 0 && txt.length <= 180) ? el : null;
+                    }
+                    const leaves = el.querySelectorAll('span, p, h1, h2, h3, h4, .truncate');
+                    for (const leaf of leaves) {
+                        if (leaf.children.length === 0) {
+                            const txt = leaf.textContent.trim();
+                            if (txt.length > 0 && txt.length <= 180) {
+                                return leaf;
+                            }
+                        }
+                    }
+                    return null;
+                }
+
+                let activeTypewriterTarget = null;
+
+                function startTypewriter(el) {
+                    if (!el || el.__prescriptTyping) return;
+                    const rawText = el.dataset.prescriptOriginalText || el.textContent;
+                    if (!rawText || rawText.trim().length === 0) return;
+
+                    el.dataset.prescriptOriginalText = rawText;
+                    el.__prescriptTyping = true;
+                    el.classList.add('prescript-hover-active');
+
+                    let i = 0;
+                    const stepSize = Math.max(1, Math.ceil(rawText.length / 16));
+                    el.textContent = '▮';
+
+                    function tick() {
+                        if (!el.isConnected || !el.__prescriptTyping) {
+                            resetTypewriter(el);
+                            return;
+                        }
+                        i += stepSize;
+                        if (i < rawText.length) {
+                            el.textContent = rawText.slice(0, i) + '▮';
+                            el.__prescriptTimer = setTimeout(tick, 18);
+                        } else {
+                            el.textContent = rawText;
+                            el.__prescriptTimer = null;
+                        }
+                    }
+                    el.__prescriptTimer = setTimeout(tick, 18);
+                }
+
+                function resetTypewriter(el) {
+                    if (!el) return;
+                    if (el.__prescriptTimer) {
+                        clearTimeout(el.__prescriptTimer);
+                        el.__prescriptTimer = null;
+                    }
+                    el.__prescriptTyping = false;
+                    if (el.dataset.prescriptOriginalText) {
+                        el.textContent = el.dataset.prescriptOriginalText;
+                    }
+                    el.classList.remove('prescript-hover-active');
+                }
+
+                const onPrescriptMouseOver = (e) => {
+                    const candidate = e.target.closest('button, a, [role="button"], [role="menuitem"], div[data-testid="conversation-row-sidebar"], h1, h2, h3, h4, .inline-pill, p, strong, b');
+                    const leaf = getLeafTextElement(candidate || e.target);
+                    if (!leaf) return;
+
+                    if (activeTypewriterTarget && activeTypewriterTarget !== leaf) {
+                        resetTypewriter(activeTypewriterTarget);
+                    }
+                    activeTypewriterTarget = leaf;
+                    startTypewriter(leaf);
+                };
+
+                const onPrescriptMouseOut = (e) => {
+                    if (!activeTypewriterTarget) return;
+                    if (!e.relatedTarget || (!activeTypewriterTarget.contains(e.relatedTarget) && !e.relatedTarget.contains(activeTypewriterTarget))) {
+                        resetTypewriter(activeTypewriterTarget);
+                        activeTypewriterTarget = null;
+                    }
+                };
+
+                document.addEventListener('mouseover', onPrescriptMouseOver, true);
+                document.addEventListener('mouseout', onPrescriptMouseOut, true);
 
                 return 'Prescript Theme Updated (Clean Header, Default Stop Button, Transparent Hand Emblem, 2-Min Quote Generator)!';
             })()`;
