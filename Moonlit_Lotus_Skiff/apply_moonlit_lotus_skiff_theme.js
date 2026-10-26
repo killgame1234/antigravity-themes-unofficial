@@ -83,15 +83,15 @@ const MOONLIT_CSS = `
         will-change: contents !important;
     }
 
-    /* Floating Moonlit Lotus Emblem Container */
-    @keyframes moonlit-lotus-float {
+    /* Floating Real-Life Blue Moon Emblem Container */
+    @keyframes blue-moon-float {
         0%, 100% {
             transform: translateY(0px) scale(1);
-            filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.7)) drop-shadow(0 0 32px rgba(251, 191, 36, 0.3));
+            filter: drop-shadow(0 0 18px rgba(56, 189, 248, 0.8)) drop-shadow(0 0 36px rgba(2, 132, 199, 0.45));
         }
         50% {
-            transform: translateY(-8px) scale(1.02);
-            filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.9)) drop-shadow(0 0 40px rgba(251, 191, 36, 0.5));
+            transform: translateY(-8px) scale(1.03);
+            filter: drop-shadow(0 0 28px rgba(56, 189, 248, 0.98)) drop-shadow(0 0 50px rgba(2, 132, 199, 0.65));
         }
     }
 
@@ -110,11 +110,12 @@ const MOONLIT_CSS = `
 
     .moonlit-lotus-img {
         max-height: min(220px, 28vh) !important;
-        max-width: min(260px, 32vw) !important;
-        width: auto !important;
-        height: auto !important;
+        max-width: min(220px, 28vw) !important;
+        width: 190px !important;
+        height: 190px !important;
+        border-radius: 50% !important;
         object-fit: contain !important;
-        animation: moonlit-lotus-float 6s infinite ease-in-out !important;
+        animation: blue-moon-float 7s infinite ease-in-out !important;
         user-select: none !important;
         pointer-events: none !important;
     }
@@ -546,13 +547,139 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     document.body.prepend(vignette);
                 }
 
-                const emblemDataUrl = 'data:image/png;base64,${emblemBase64}';
+                // =========================================================================
+                // 2. REAL-LIFE ASTRONOMICAL BLUE MOON PHASE ENGINE
+                // =========================================================================
+                function getRealLifeMoonPhase(date = new Date()) {
+                    // Reference astronomical new moon: Jan 11, 2024 11:57:00 UTC
+                    const refNewMoon = new Date(Date.UTC(2024, 0, 11, 11, 57, 0)).getTime();
+                    const synodicMonth = 29.53058867 * 24 * 60 * 60 * 1000;
+                    const diff = date.getTime() - refNewMoon;
+                    const cycles = (diff % synodicMonth) / synodicMonth;
+                    const phase = cycles < 0 ? cycles + 1 : cycles;
+
+                    let phaseName = '';
+                    if (phase < 0.025 || phase > 0.975) phaseName = 'New Moon';
+                    else if (phase < 0.22) phaseName = 'Waxing Crescent';
+                    else if (phase < 0.28) phaseName = 'First Quarter';
+                    else if (phase < 0.47) phaseName = 'Waxing Gibbous';
+                    else if (phase < 0.53) phaseName = 'Full Moon';
+                    else if (phase < 0.72) phaseName = 'Waning Gibbous';
+                    else if (phase < 0.78) phaseName = 'Last Quarter';
+                    else phaseName = 'Waning Crescent';
+
+                    const illumination = Math.round(0.5 * (1 - Math.cos(phase * 2 * Math.PI)) * 100);
+                    const ageDays = (phase * 29.53).toFixed(1);
+                    return { phase, phaseName, illumination, ageDays };
+                }
+
+                function generateBlueMoonDataUrl(size, phase) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    const cx = size / 2;
+                    const cy = size / 2;
+                    const r = size * 0.38;
+
+                    // (a) Ambient Atmospheric Cyan Glow
+                    const glow = ctx.createRadialGradient(cx, cy, r * 0.75, cx, cy, r * 1.4);
+                    glow.addColorStop(0, 'rgba(56, 189, 248, 0.65)');
+                    glow.addColorStop(0.45, 'rgba(2, 132, 199, 0.25)');
+                    glow.addColorStop(1, 'rgba(6, 11, 22, 0)');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r * 1.4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // (b) Base Dark Moon (Earthshine Sphere)
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    ctx.clip();
+
+                    const darkGrad = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.25, 0, cx, cy, r);
+                    darkGrad.addColorStop(0, '#0c1a2e');
+                    darkGrad.addColorStop(0.7, '#07101f');
+                    darkGrad.addColorStop(1, '#030712');
+                    ctx.fillStyle = darkGrad;
+                    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+                    // (c) Lit Moon Surface (Astronomical Terminator Arc)
+                    const p = phase % 1.0;
+                    const cosP = Math.cos(p * 2 * Math.PI);
+                    const isWaxing = p <= 0.5;
+                    const rx = Math.max(0.1, r * Math.abs(cosP));
+
+                    ctx.beginPath();
+                    if (isWaxing) {
+                        ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, false);
+                        if (cosP >= 0) {
+                            ctx.ellipse(cx, cy, rx, r, 0, Math.PI / 2, -Math.PI / 2, true);
+                        } else {
+                            ctx.ellipse(cx, cy, rx, r, 0, Math.PI / 2, -Math.PI / 2, false);
+                        }
+                    } else {
+                        ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2, false);
+                        if (cosP >= 0) {
+                            ctx.ellipse(cx, cy, rx, r, 0, -Math.PI / 2, Math.PI / 2, true);
+                        } else {
+                            ctx.ellipse(cx, cy, rx, r, 0, -Math.PI / 2, Math.PI / 2, false);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.clip();
+
+                    // Moonlit Azure Texture
+                    const moonGrad = ctx.createRadialGradient(
+                        isWaxing ? cx + r * 0.25 : cx - r * 0.25,
+                        cy - r * 0.2,
+                        0,
+                        cx,
+                        cy,
+                        r * 1.15
+                    );
+                    moonGrad.addColorStop(0, '#ffffff');
+                    moonGrad.addColorStop(0.22, '#e0f2fe');
+                    moonGrad.addColorStop(0.55, '#38bdf8');
+                    moonGrad.addColorStop(0.85, '#0284c7');
+                    moonGrad.addColorStop(1, '#034a7d');
+                    ctx.fillStyle = moonGrad;
+                    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+                    // Lunar Maria Craters
+                    ctx.fillStyle = 'rgba(2, 100, 160, 0.35)';
+                    ctx.beginPath(); ctx.arc(cx - r * 0.18, cy - r * 0.18, r * 0.26, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + r * 0.25, cy - r * 0.12, r * 0.22, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx - r * 0.08, cy + r * 0.28, r * 0.32, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + r * 0.32, cy + r * 0.25, r * 0.18, 0, Math.PI * 2); ctx.fill();
+
+                    // Bright Ray Craters
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                    ctx.beginPath(); ctx.arc(cx + (isWaxing ? r * 0.28 : -r * 0.28), cy + r * 0.35, r * 0.05, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + (isWaxing ? r * 0.12 : -r * 0.12), cy - r * 0.35, r * 0.04, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.restore();
+
+                    // Outer Rim Glint
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(125, 211, 252, 0.45)';
+                    ctx.lineWidth = 1.0;
+                    ctx.stroke();
+
+                    return canvas.toDataURL('image/png');
+                }
+
+                let currentMoonInfo = getRealLifeMoonPhase();
+                let currentSmallMoonUrl = generateBlueMoonDataUrl(72, currentMoonInfo.phase);
+                let currentLargeMoonUrl = generateBlueMoonDataUrl(320, currentMoonInfo.phase);
 
                 let emblem = document.getElementById('moonlit-lotus-emblem');
                 if (!emblem) {
                     emblem = document.createElement('div');
                     emblem.id = 'moonlit-lotus-emblem';
-                    emblem.innerHTML = '<img class="moonlit-lotus-img" src="' + emblemDataUrl + '" alt="Moonlit Lotus Emblem" />';
+                    emblem.innerHTML = '<img class="moonlit-lotus-img" src="' + currentLargeMoonUrl + '" alt="Real-Life Blue Moon" />';
                     document.body.prepend(emblem);
                 }
 
@@ -563,8 +690,13 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     document.body.appendChild(poemBox);
                 }
 
-                // Update Antigravity Top Logo
-                function updateTopLogo() {
+                // Update Antigravity Top Logo and Floating Emblem to Real-Life Blue Moon
+                function updateMoonIcons() {
+                    const nowInfo = getRealLifeMoonPhase();
+                    // If lunar phase changed or first run
+                    currentSmallMoonUrl = generateBlueMoonDataUrl(72, nowInfo.phase);
+                    currentLargeMoonUrl = generateBlueMoonDataUrl(320, nowInfo.phase);
+
                     const btn = document.querySelector('[data-testid="app-icon-new-conversation-button"]');
                     if (btn) {
                         const svg = btn.querySelector('svg');
@@ -573,10 +705,17 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                         if (!icon) {
                             icon = document.createElement('img');
                             icon.className = 'moonlit-top-app-icon';
-                            icon.src = emblemDataUrl;
-                            icon.alt = 'Moonlit Lotus';
                             btn.appendChild(icon);
                         }
+                        if (icon.src !== currentSmallMoonUrl) icon.src = currentSmallMoonUrl;
+                        icon.alt = 'Blue Moon (' + nowInfo.phaseName + ')';
+                        btn.title = 'Real-Life Lunar Phase: ' + nowInfo.phaseName + ' (' + nowInfo.illumination + '% illuminated, Day ' + nowInfo.ageDays + ' of cycle)';
+                    }
+
+                    const emblemImg = emblem ? emblem.querySelector('.moonlit-lotus-img') : null;
+                    if (emblemImg && emblemImg.src !== currentLargeMoonUrl) {
+                        emblemImg.src = currentLargeMoonUrl;
+                        emblemImg.alt = 'Real-Life Blue Moon: ' + nowInfo.phaseName;
                     }
 
                     let link = document.querySelector('link[rel*="icon"]');
@@ -586,9 +725,9 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                         document.head.appendChild(link);
                     }
                     link.type = 'image/png';
-                    link.href = emblemDataUrl;
+                    link.href = currentSmallMoonUrl;
                 }
-                updateTopLogo();
+                updateMoonIcons();
 
                 // =========================================================================
                 // 3. LIVING ATMOSPHERIC CANVAS ENGINE
@@ -852,6 +991,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 // 4. DYNAMIC LAYOUT SYMMETRY CONTROLLER (NEW CONV vs ACTIVE CHAT)
                 // =========================================================================
                 function updateMoonlitLayout(now) {
+                    if (state._pauseLayout) return;
                     if (now && now - state.lastLayoutCheck < 150) return;
                     state.lastLayoutCheck = now || performance.now();
 
@@ -1037,7 +1177,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     if (!document.getElementById('moonlit-vignette-overlay')) {
                         document.body.prepend(vignette);
                     }
-                    updateTopLogo();
+                    updateMoonIcons();
                 }
 
                 // =========================================================================
@@ -1047,6 +1187,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                     ensureDOMElements();
                     resizeCanvas();
                     updateMoonlitLayout();
+                    updateMoonIcons();
                     const now = performance.now();
                     if (!document.hidden && now - state.lastFrameTime > 2500) {
                         if (state.animFrame) cancelAnimationFrame(state.animFrame);
@@ -1061,7 +1202,7 @@ function injectIntoPage(wsUrl, videoBase64, emblemBase64) {
                 observer.observe(document.body, { childList: true, subtree: true });
                 state.observer = observer;
 
-                return 'Moonlit Lotus Skiff Theme Live: Living Butterflies, Water Ripples, Symmetrical Zen Mode, and Custom App Icons!';
+                return 'Moonlit Lotus Skiff Theme Live: Real-Life Astronomical Blue Moon Phase Engine!';
             })();`;
 
             ws.send(JSON.stringify({
