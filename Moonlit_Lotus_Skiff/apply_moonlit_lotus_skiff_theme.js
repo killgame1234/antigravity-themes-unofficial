@@ -306,8 +306,7 @@ function injectIntoPage(wsUrl, videoBase64) {
                         object-fit: cover !important;
                         z-index: 0 !important;
                         pointer-events: none !important;
-                        opacity: 0.65 !important;
-                        filter: contrast(1.1) saturate(1.15) brightness(0.85) !important;
+                        opacity: 0.60 !important;
                     }
 
                     #moonlit-vignette-overlay {
@@ -395,8 +394,7 @@ function injectIntoPage(wsUrl, videoBase64) {
                     }
 
                     [class*="group/user-input-step"] .bg-card {
-                        background: linear-gradient(135deg, rgba(14, 28, 50, 0.88) 0%, rgba(8, 16, 32, 0.94) 100%) !important;
-                        backdrop-filter: blur(18px) !important;
+                        background: linear-gradient(135deg, rgba(14, 28, 50, 0.94) 0%, rgba(8, 16, 32, 0.97) 100%) !important;
                         border-radius: 13px !important;
                         color: #F8FAFC !important;
                         box-shadow: inset 0 0 14px rgba(56, 189, 248, 0.14) !important;
@@ -404,17 +402,16 @@ function injectIntoPage(wsUrl, videoBase64) {
 
                     /* Assistant Bubble: Deep Indigo Night with Moonbeam & Amber accents */
                     .gap-y-3 > .flex.items-start:not(:has([class*="group/user-input-step"])) > .flex-col {
-                        background: linear-gradient(160deg, rgba(10, 18, 34, 0.82) 0%, rgba(6, 11, 22, 0.9) 100%) !important;
-                        backdrop-filter: blur(18px) saturate(135%) !important;
+                        background: linear-gradient(160deg, rgba(10, 18, 34, 0.93) 0%, rgba(6, 11, 22, 0.97) 100%) !important;
                         border: 1px solid rgba(56, 189, 248, 0.3) !important;
                         border-radius: 14px !important;
                         padding: 14px 18px !important;
                         margin-top: 4px !important;
                         margin-bottom: 4px !important;
                         box-shadow:
-                            0 10px 30px rgba(0, 0, 0, 0.85),
-                            0 0 16px rgba(56, 189, 248, 0.12),
-                            inset 0 1px 0 rgba(251, 191, 36, 0.32) !important;
+                            0 8px 26px rgba(0, 0, 0, 0.85),
+                            0 0 12px rgba(56, 189, 248, 0.12),
+                            inset 0 1px 0 rgba(251, 191, 36, 0.28) !important;
                         transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
                     }
 
@@ -446,8 +443,7 @@ function injectIntoPage(wsUrl, videoBase64) {
                     }
 
                     .rounded-2xl.bg-card-border > .bg-card {
-                        background: rgba(8, 14, 26, 0.88) !important;
-                        backdrop-filter: blur(20px) !important;
+                        background: rgba(8, 14, 26, 0.95) !important;
                         box-shadow: inset 0 0 16px rgba(56, 189, 248, 0.1) !important;
                     }
 

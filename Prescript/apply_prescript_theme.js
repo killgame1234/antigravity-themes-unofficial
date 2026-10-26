@@ -603,8 +603,7 @@ function injectIntoPage(wsUrl, imgBase64) {
                     }
 
                     [class*="group/user-input-step"] .bg-card {
-                        background: linear-gradient(135deg, rgba(6, 28, 46, 0.88) 0%, rgba(3, 14, 24, 0.92) 65%, rgba(18, 14, 5, 0.94) 100%) !important;
-                        backdrop-filter: blur(18px) !important;
+                        background: linear-gradient(135deg, rgba(6, 28, 46, 0.94) 0%, rgba(3, 14, 24, 0.96) 65%, rgba(18, 14, 5, 0.97) 100%) !important;
                         border-radius: 11px !important;
                         color: #E8FCFF !important;
                         box-shadow: inset 0 0 18px rgba(0, 229, 255, 0.16) !important;
@@ -628,8 +627,7 @@ function injectIntoPage(wsUrl, imgBase64) {
                             rgba(4, 10, 16, 0.78) !important;
                         background-repeat: no-repeat !important;
                         background-size: 10px 10px, 10px 10px, 10px 10px, 10px 10px, 10px 10px, 10px 10px, 10px 10px, 10px 10px, 100% 100% !important;
-                        backdrop-filter: blur(16px) saturate(145%) !important;
-                        border: 1px solid rgba(0, 229, 255, 0.46) !important;
+                        border: 1px solid rgba(0, 229, 255, 0.42) !important;
                         border-radius: 10px !important;
                         padding: 15px 18px !important;
                         margin-top: 4px !important;
@@ -670,8 +668,7 @@ function injectIntoPage(wsUrl, imgBase64) {
                     }
 
                     .rounded-2xl.bg-card-border > .bg-card {
-                        background: rgba(3, 8, 14, 0.88) !important;
-                        backdrop-filter: blur(20px) !important;
+                        background: rgba(3, 8, 14, 0.95) !important;
                         box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.12) !important;
                     }
 

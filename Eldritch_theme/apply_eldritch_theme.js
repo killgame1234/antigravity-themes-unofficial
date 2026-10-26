@@ -236,8 +236,7 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                         object-fit: cover !important;
                         z-index: 0 !important;
                         pointer-events: none !important;
-                        opacity: 0.58 !important;
-                        filter: contrast(1.18) saturate(1.25) brightness(0.78) !important;
+                        opacity: 0.54 !important;
                     }
 
                     #eldritch-vignette-overlay {
@@ -438,28 +437,26 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     [class*="group/user-input-step"] .bg-card {
-                        background: linear-gradient(135deg, rgba(72, 4, 18, 0.88) 0%, rgba(34, 2, 9, 0.92) 60%, rgba(14, 0, 4, 0.95) 100%) !important;
-                        backdrop-filter: blur(18px) !important;
+                        background: linear-gradient(135deg, rgba(62, 3, 15, 0.94) 0%, rgba(28, 1, 7, 0.97) 100%) !important;
                         border-radius: 13px !important;
                         color: #FFE8EB !important;
-                        box-shadow: inset 0 0 16px rgba(255, 30, 56, 0.22) !important;
+                        box-shadow: inset 0 0 16px rgba(255, 30, 56, 0.2) !important;
                     }
 
                     /* ==========================================================================
                        TRANSLUCENT BLACK GLASSMORPHIC AGENT MESSAGE BUBBLES
                        ========================================================================== */
                     .gap-y-3 > .flex.items-start:not(:has([class*="group/user-input-step"])) > .flex-col {
-                        background: linear-gradient(160deg, rgba(6, 0, 2, 0.76) 0%, rgba(0, 0, 0, 0.84) 100%) !important;
-                        backdrop-filter: blur(16px) saturate(140%) !important;
-                        border: 1px solid rgba(255, 30, 56, 0.42) !important;
+                        background: linear-gradient(160deg, rgba(8, 0, 3, 0.93) 0%, rgba(2, 0, 1, 0.97) 100%) !important;
+                        border: 1px solid rgba(255, 30, 56, 0.38) !important;
                         border-radius: 14px !important;
                         padding: 14px 18px !important;
                         margin-top: 4px !important;
                         margin-bottom: 4px !important;
                         box-shadow:
-                            0 10px 32px rgba(0, 0, 0, 0.92),
-                            0 0 14px rgba(255, 30, 56, 0.16),
-                            inset 0 1px 0 rgba(255, 30, 56, 0.3) !important;
+                            0 8px 28px rgba(0, 0, 0, 0.92),
+                            0 0 12px rgba(255, 30, 56, 0.14),
+                            inset 0 1px 0 rgba(255, 30, 56, 0.25) !important;
                         transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
                     }
 
@@ -501,8 +498,7 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     .rounded-2xl.bg-card-border > .bg-card {
-                        background: rgba(4, 0, 2, 0.88) !important;
-                        backdrop-filter: blur(20px) !important;
+                        background: rgba(5, 0, 2, 0.95) !important;
                         box-shadow: inset 0 0 18px rgba(255, 30, 56, 0.14) !important;
                     }
 
@@ -693,27 +689,14 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                     }
 
                     strong, b {
-                        background: linear-gradient(
-                            90deg,
-                            #FF475E 0%,
-                            #FFA8B5 18%,
-                            #FFFFFF 30%,
-                            #FFA8B5 44%,
-                            #FF2E47 60%,
-                            #9E0015 76%,
-                            #FF475E 100%
-                        ) !important;
-                        background-size: 300% 100% !important;
-                        -webkit-background-clip: text !important;
-                        background-clip: text !important;
-                        -webkit-text-fill-color: transparent !important;
-                        color: #FF475E !important;
-                        filter: drop-shadow(0 0 8px rgba(255, 30, 56, 0.42)) !important;
-                        animation: eldritch-gradient-flow-ltr 4s linear infinite !important;
+                        color: #FFE0E6 !important;
+                        font-weight: 600 !important;
+                        text-shadow: 0 0 6px rgba(255, 30, 56, 0.42) !important;
                     }
 
                     strong:hover, b:hover {
-                        filter: drop-shadow(0 0 12px rgba(255, 30, 56, 0.85)) !important;
+                        color: #FFFFFF !important;
+                        text-shadow: 0 0 10px rgba(255, 30, 56, 0.85) !important;
                     }
 
                     a,
@@ -1214,7 +1197,7 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                 let currentHoverEl = null;
                 let hoverSpawnCooldown = 0;
 
-                const hoverSelector = 'button, a, [role="button"], [role="menuitem"], .inline-pill, input, textarea, [class*="group/user-input-step"] .bg-card-border, .gap-y-3 > .flex.items-start > .flex-col';
+                const hoverSelector = 'button, a, [role="button"], [role="menuitem"], .inline-pill, input, textarea, [data-testid="conversation-row-sidebar"]';
 
                 function getTargetEyeCount(r) {
                     const perimeter = 2 * (r.width + r.height);
@@ -1309,32 +1292,41 @@ function injectIntoPage(wsUrl, videoBase64, eyeGifBase64) {
                 const onMouseMove = (e) => {
                     mouseX = e.clientX;
                     mouseY = e.clientY;
-                    if (currentHoverEl && !currentHoverEl.contains(e.target)) {
-                        const next = e.target.closest(hoverSelector);
-                        if (!next) {
-                            currentHoverEl = null;
-                            for (const eye of activeHoverEyes) eye.closing = true;
-                        }
+                };
+
+                const onMouseOut = (e) => {
+                    if (currentHoverEl && (!e.relatedTarget || !currentHoverEl.contains(e.relatedTarget))) {
+                        currentHoverEl = null;
+                        for (const eye of activeHoverEyes) eye.closing = true;
                     }
                 };
 
                 document.addEventListener('mouseover', onMouseOver, true);
-                window.addEventListener('mousemove', onMouseMove, true);
+                document.addEventListener('mouseout', onMouseOut, true);
+                window.addEventListener('mousemove', onMouseMove, { passive: true, capture: true });
                 window.addEventListener('resize', resizeHoverCanvas);
 
                 window.__eldritchHoverCleanup = () => {
                     document.removeEventListener('mouseover', onMouseOver, true);
-                    window.removeEventListener('mousemove', onMouseMove, true);
+                    document.removeEventListener('mouseout', onMouseOut, true);
+                    window.removeEventListener('mousemove', onMouseMove, { passive: true, capture: true });
                     window.removeEventListener('resize', resizeHoverCanvas);
                 };
 
+                let hoverCanvasDirty = false;
                 function renderHoverEyes() {
                     if (document.hidden) {
                         window.__eldritchHoverEyeAnimFrame = requestAnimationFrame(renderHoverEyes);
                         return;
                     }
                     renderAmbientEyeRifts();
-                    hCtx.clearRect(0, 0, hoverEyeCanvas.width, hoverEyeCanvas.height);
+                    if (activeHoverEyes.length > 0 || currentHoverEl) {
+                        hCtx.clearRect(0, 0, hoverEyeCanvas.width, hoverEyeCanvas.height);
+                        hoverCanvasDirty = true;
+                    } else if (hoverCanvasDirty) {
+                        hCtx.clearRect(0, 0, hoverEyeCanvas.width, hoverEyeCanvas.height);
+                        hoverCanvasDirty = false;
+                    }
 
                     if (currentHoverEl && document.body.contains(currentHoverEl)) {
                         hoverSpawnCooldown--;
