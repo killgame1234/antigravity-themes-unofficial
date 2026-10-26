@@ -140,66 +140,8 @@ function injectIntoPage(wsUrl, imgBase64, twBase64) {
                 });
                 document.querySelectorAll('.eldritch-stop-eye-svg, .prescript-stop-seal-svg').forEach(el => el.remove());
 
-                // 1. Extract the Hand + Crescent + Blue Flower Emblem with TRUE TRANSPARENT ALPHA (Zero Box!)
-                const srcImg = new Image();
-                srcImg.src = "data:image/webp;base64,${imgBase64}";
-                await new Promise((res, rej) => {
-                    srcImg.onload = res;
-                    srcImg.onerror = rej;
-                });
-
-                const cropCanvas = document.createElement('canvas');
-                const cropW = 400;
-                const cropH = 400;
-                cropCanvas.width = cropW;
-                cropCanvas.height = cropH;
-                const cropCtx = cropCanvas.getContext('2d');
-
-                const sx = Math.max(0, Math.floor((srcImg.naturalWidth - cropW) / 2));
-                const sy = 10;
-                cropCtx.drawImage(srcImg, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
-
-                // Key out the dark background pixels (#0b0d0f) to 100% transparent alpha (0)
-                // so there is NEVER a visible rectangle or glow box around the emblem
-                const imgData = cropCtx.getImageData(0, 0, cropW, cropH);
-                const data = imgData.data;
-                const cx = cropW / 2;
-                const cy = cropH / 2;
-                const maxRadius = cropW * 0.46;
-
-                for (let y = 0; y < cropH; y++) {
-                    for (let x = 0; x < cropW; x++) {
-                        const idx = (y * cropW + x) * 4;
-                        const r = data[idx];
-                        const g = data[idx + 1];
-                        const b = data[idx + 2];
-
-                        // Calculate pixel brightness above the dark background floor (~18)
-                        const maxC = Math.max(r, g, b);
-                        const floor = 22;
-
-                        // Radial distance mask so outer corners are strictly 0 alpha
-                        const dx = x - cx;
-                        const dy = y - cy;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        const radialMask = dist > maxRadius
-                            ? 0
-                            : dist > maxRadius * 0.78
-                                ? 1 - (dist - maxRadius * 0.78) / (maxRadius * 0.22)
-                                : 1;
-
-                        if (maxC <= floor || radialMask <= 0) {
-                            data[idx + 3] = 0;
-                        } else {
-                            // Smooth alpha ramp for glowing edges & lines
-                            const norm = Math.min(1, (maxC - floor) / 140);
-                            const alpha = Math.pow(norm, 0.85) * radialMask;
-                            data[idx + 3] = Math.round(alpha * 255);
-                        }
-                    }
-                }
-                cropCtx.putImageData(imgData, 0, 0);
-                const handDataUrl = cropCanvas.toDataURL('image/png');
+                // 1. Transparent Hand + Crescent + Blue Flower Emblem (Complete, unclipped top flower)
+                const handDataUrl = "data:image/webp;base64,${imgBase64}";
 
                 // 2. Create Background Layers:
                 //    (a) Animated Cyan Strings of Fate Canvas
