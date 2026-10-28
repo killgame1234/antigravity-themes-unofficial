@@ -19,6 +19,7 @@ A collection of live-injected custom themes, animated `<canvas>`/video backgroun
    - `Prescript\Apply_Prescript_Theme.bat`
    - `Eldritch_theme\Apply_Eldritch_Theme.bat`
    - `Moonlit_Lotus_Skiff\Apply_Moonlit_Lotus_Skiff_Theme.bat`
+   - `Black_Shores_Shorekeeper\Apply_Black_Shores_Theme.bat`
 
 *(Or run via PowerShell)*:
 ```powershell
@@ -75,7 +76,26 @@ $env:ELECTRON_RUN_AS_NODE="1"
 - **Launcher**: [`Moonlit_Lotus_Skiff/Apply_Moonlit_Lotus_Skiff_Theme.bat`](./Moonlit_Lotus_Skiff/Apply_Moonlit_Lotus_Skiff_Theme.bat)
 - **Features**:
   - **Palette**: Serene moonlit night sky, warm lantern gold, and lotus pink glassmorphism.
-  - **Live Video Wallpaper & Drifting Lantern Petals**: Smooth looping background video (`moonlit_bg.mp4`) paired with an interactive `<canvas>` particle layer of glowing lotus petals and fireflies.
+  - **Dual-Realm Video Background**: Automated cross-fade between Moonlit Lotus Skiff and Ancient Frost Tree (Iuno).
+  - **Real-Life Astronomical Lunar Cycle**: Precise 29.53-day Blue Moon phase calendar HUD and top navigation icon.
+
+---
+
+### 5. The Black Shores & Shorekeeper (Wuthering Waves — Tacet Sonata)
+- **Folder**: [`Black_Shores_Shorekeeper/`](./Black_Shores_Shorekeeper)
+- **Launcher**: [`Black_Shores_Shorekeeper/Apply_Black_Shores_Theme.bat`](./Black_Shores_Shorekeeper/Apply_Black_Shores_Theme.bat)
+- **Features**:
+  - **Palette**: Deep sea of Tethys abyssal black (`#020611`), Quantum Tethys Cyan (`#00F0FF`), Shorekeeper Celestial Iris (`#818CF8`), and Asteria Bloom Lilac (`#C084FC`).
+  - **3-Tier Sonoro Resonance Domain Shift (`window.__blackShoresState`)**: Dynamically shifts environment between Stage 1 (Deep Sea / Idle), Stage 2 (Constellation Nebula / In-Chat), and Stage 3 (Supernal Resonance / Agent Execution Shimmer).
+  - **Living Canvas Engine (`#blackshores-canvas`)**:
+    - **Gravitational Constellation Mesh**: Star nodes with dynamic distance triangulation that bend toward the cursor via gravitational lensing physics.
+    - **Flapping Crystalline Stellar Butterflies**: Sinusoidal 3D wing physics shedding quantum stardust trails.
+    - **Drifting Asteria Petals & Data Motes**: Translucent glowing florets swaying organically downwards.
+    - **Interactive Soundwave Ripples**: Concentric frequency waves with hexagonal quantum data glimmers on click.
+    - **Idle Resting Butterfly Companion**: Glides in and rests on the cursor tip after 2.5s pause, bursting into sparks upon movement.
+  - **Native Web Audio API Tacet Resonance**: Zero external audio files; pure procedural crystal pentatonic harmonic chimes on composer typing and button interactions, with a top navigation bar toggle (`[RESONANCE: ON/OFF]`).
+  - **Symmetrical Tethys Terminal HUD**: Symmetrically docked floating holographic Shorekeeper Constellation Crest above composer and live equalizer telemetry card below in New Conversation mode, fading cleanly in active chat.
+  - **Custom App Navigation Icon & Windows Shortcut**: 36px custom glowing Shorekeeper butterfly vector with iridescent hover bloom and embedded `.ico`.
 
 ---
 
